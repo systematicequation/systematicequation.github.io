@@ -1,0 +1,256 @@
+body {
+  margin: 0;
+  background-color: black;
+  height:100%;
+  width: 100%;
+}
+
+a {
+  text-decoration: none;
+  color: #CB8;
+}
+
+.link {
+  display: block;
+}
+
+.logo-container {
+  width: 100%;
+  max-width: 432px;
+}
+
+.logo {
+  width: 100%;
+  height: auto;
+}
+
+#background {
+  background-image: url('./images/nebula.png');
+  background-repeat: repeat;
+  background-attachment: fixed;
+  width: calc(100% - 40px);
+  padding-left: 20px;
+  padding-right: 20px;
+  padding-top: 50px;
+}
+
+#container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#items {
+  margin-top: 40px;
+}
+
+.width-group {
+  width: 100%;
+  max-width: 600px;
+}
+
+.sans-font {
+  font-family: sans-serif;
+  line-height: 1.25;
+  color: #CCC;
+}
+
+#roadmap-label {
+  font-weight: bold;
+  font-size: 24px;
+  letter-spacing: 1px;
+  margin-top: 40px;
+}
+
+#subtitle {
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  width: 100%;
+  text-align: center;
+}
+
+#cta-buttons {
+  width: 100%;
+  height: 50px;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+#social-buttons {
+  flex-basis: 51%;
+  display: flex;
+  justify-content: space-between;
+}
+
+.cta-button {
+  height: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+
+.cta-logo {
+  flex-basis: 32px;
+  width: 32px;
+  height: 32px;
+  margin: 10px;
+  margin-right: 0px;
+  margin-left: 10px;
+}
+
+.cta-label {
+  margin-top: auto;
+  margin-bottom: auto;
+  flex-grow: 1;
+  text-align: center;
+  font-weight: bold;
+  font-size: 22px;
+  color: #EEE;
+}
+
+#play-button {
+  flex-basis: 47%;
+  background: #224422;
+  border: 1px solid #448844;
+}
+
+#play-button:hover {
+  border: 1px solid #55aa55;
+}
+
+#play-button:hover div {
+  color: #CCFFCC;
+}
+
+#discord-button {
+  flex-basis: 48%;
+  background: #2a3044;
+  border: 1px solid #446688;
+}
+
+#discord-button:hover {
+  border: 1px solid #6688aa;
+}
+
+#discord-button:hover div {
+  color: #CCDDFF;
+}
+
+#youtube-button {
+  flex-basis: 48%;
+  background: #440000;
+  border: 1px solid #880000;
+}
+
+#youtube-button:hover {
+  border: 1px solid #aa0000;
+}
+
+#youtube-button:hover div {
+  color: #FFCCCC;
+}
+
+.timeframe-label {
+  font-weight: bold;
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: #CC6;
+}
+
+.roadmap-item {
+  background-color: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 10px;
+  margin-bottom: 10px;
+  position:relative;
+  transition: 100ms linear;
+}
+
+.roadmap-item:hover {
+  transform: scale(1.02);
+  transition: 80ms linear;
+}
+
+.delayed {
+  background-color: rgba(255,127,0,0.1);
+  border: 1px solid rgba(255,127,0,0.2);
+}
+
+.color-delayed {
+  color: rgb(160,120,80);
+}
+
+.deployed {
+  background-color: rgba(0,255,0,0.1);
+  border: 1px solid rgba(0,255,0,0.2);
+}
+
+.color-deployed {
+  color: rgb(80,160,80);
+}
+
+.completed {
+  background-color: rgba(0,127,255,0.1);
+  border: 1px solid rgba(0,127,255,0.2);
+}
+
+.color-completed {
+  color: rgb(80,120,160);
+}
+
+.in-progress {
+  background-color: rgba(255,255,0,0.1);
+  border: 1px solid rgba(255,255,0,0.2);
+}
+
+.color-in-progress {
+  color: rgb(160,160,80);
+}
+
+.next {
+  background-color: rgba(0,255,255,0.1);
+  border: 1px solid rgba(0,255,255,0.2);
+}
+
+.color-next {
+  color: rgb(80,160,160);
+}
+
+.item-title-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.item-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.item-description {
+  font-size: 16px
+}
+
+#item-template {
+  display: none;
+}
+
+.item-category {
+  margin-bottom: 30px;
+}
+
+@media screen and (max-width: 640px) {
+  #cta-buttons {
+    flex-direction: column;
+    margin-bottom: 60px;
+  }
+  #social-buttons {
+    flex-basis: 100%;
+  }
+  #play-button {
+    flex-basis: 100%;
+    margin-bottom: 12px;
+  }
+}
