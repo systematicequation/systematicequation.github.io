@@ -38,7 +38,7 @@ a {
 }
 
 #background {
-  background: linear-gradient(rgba(0, 0, 0, .25), rgba(0, 0, 0.75)), url('../images/Background.png');
+  background: linear-gradient(rgba(0, 0, 0, .25), rgba(0, 0, 0.75)), url('../images/background.png');
   background-position: center center;
   background-size: cover;
   background-repeat: repeat;
