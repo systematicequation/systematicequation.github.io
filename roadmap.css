@@ -1,7 +1,7 @@
 body {
   margin: 0;
   background-color: black;
-  height:100%;
+  height: 100%;
   width: 100%;
 
   animation: fadeInAnimation ease 3s;
@@ -11,10 +11,11 @@ body {
 
 @keyframes fadeInAnimation {
   0% {
-      opacity: 0;
+    opacity: 0;
   }
+
   100% {
-      opacity: 1;
+    opacity: 1;
   }
 }
 
@@ -42,7 +43,7 @@ a {
   background-position: center center;
   background-size: cover;
   background-repeat: repeat;
-  background-color:#000000;
+  background-color: #000000;
   background-attachment: fixed;
   width: calc(100% - 40px);
   padding-left: 20px;
@@ -81,7 +82,7 @@ a {
 #roadmap-title {
   font-weight: bold;
   font-size: 42px;
-  
+
   text-align: center;
 }
 
@@ -228,11 +229,11 @@ a {
 }
 
 .roadmap-item {
-  background-color: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 10px;
   margin-bottom: 10px;
-  position:relative;
+  position: relative;
   transition: 100ms linear;
 }
 
@@ -243,34 +244,34 @@ a {
 
 .delayed {
   background-color: rgba(219, 17, 17, 0.1);
-  border: 1px solid rgba(255,127,0,0.2);
+  border: 1px solid rgba(255, 127, 0, 0.2);
 }
 
 .color-delayed {
-  color: rgb(160,120,80);
+  color: rgb(160, 120, 80);
 }
 
 .deployed {
-  background-color: rgba(0,255,0,0.1);
-  border: 1px solid rgba(0,255,0,0.2);
+  background-color: rgba(0, 255, 0, 0.1);
+  border: 1px solid rgba(0, 255, 0, 0.2);
 }
 
 .fixed {
-  background-color: rgba(0,255,0,0.1);
-  border: 1px solid rgba(0,255,0,0.2);
+  background-color: rgba(0, 255, 0, 0.1);
+  border: 1px solid rgba(0, 255, 0, 0.2);
 }
 
 .color-fixed {
-  color: rgb(80,160,80);
+  color: rgb(80, 160, 80);
 }
 
 .color-deployed {
-  color: rgb(80,160,80);
+  color: rgb(80, 160, 80);
 }
 
 .completed {
-  background-color: rgba(0,127,255,0.1);
-  border: 1px solid rgba(0,127,255,0.2);
+  background-color: rgba(0, 127, 255, 0.1);
+  border: 1px solid rgba(0, 127, 255, 0.2);
 }
 
 .polishing {
@@ -283,25 +284,25 @@ a {
 }
 
 .color-completed {
-  color: rgb(80,120,160);
+  color: rgb(80, 120, 160);
 }
 
 .in-progress {
-  background-color: rgba(255,255,0,0.1);
-  border: 1px solid rgba(255,255,0,0.2);
+  background-color: rgba(255, 255, 0, 0.1);
+  border: 1px solid rgba(255, 255, 0, 0.2);
 }
 
 .color-in-progress {
-  color: rgb(160,160,80);
+  color: rgb(160, 160, 80);
 }
 
 .next {
-  background-color: rgba(0,255,255,0.1);
-  border: 1px solid rgba(0,255,255,0.2);
+  background-color: rgba(0, 255, 255, 0.1);
+  border: 1px solid rgba(0, 255, 255, 0.2);
 }
 
 .color-next {
-  color: rgb(80,160,160);
+  color: rgb(80, 160, 160);
 }
 
 .item-title-row {
@@ -332,22 +333,22 @@ a {
     flex-direction: column;
     margin-bottom: 60px;
   }
+
   #social-buttons {
     flex-basis: 100%;
   }
+
   #play-button {
     flex-basis: 100%;
     margin-bottom: 12px;
   }
 }
 
-
-
-#details-box{
+#details-box {
   font-size: 15px;
   position: absolute;
   left: 5%;
-  top:60%;
+  top: 60%;
   width: 90%;
   height: 40%;
 }
@@ -356,9 +357,9 @@ a {
   line-height: 20px;
   height: 150px;
   text-align: center;
-  }
+}
 
-#text{
+#text {
   position: absolute;
   font-size: 20px;
   color: white;
@@ -366,18 +367,19 @@ a {
   position: relative;
 }
 
-#overlay-background{
-  display:none;
+#overlay-background {
+  display: none;
   position: fixed;
   background-color: #000000ea;
   z-index: 2;
-  top:0px;
+  top: 0px;
   width: 100%;
   height: 100%;
   overflow-y: auto;
 }
+
 #overlay {
-  height:100%;
+  height: 100%;
   width: 100%;
   margin: 0 auto !important;
 }

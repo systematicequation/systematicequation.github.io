@@ -3,24 +3,21 @@ const DEPLOYED = 'deployed';
 const IN_PROGRESS = 'in-progress';
 const NEXT = 'next';
 const DELAYED = 'delayed';
+const POLISHING = 'polishing';
+const FIXED = 'fixed';
 
 const STATUS_NAMES = {
   [COMPLETED]: 'Completed',
   [DEPLOYED]: 'Live',
   [IN_PROGRESS]: 'In progress',
   [NEXT]: 'Next priority',
-  [DELAYED]: 'Delayed'
+  [DELAYED]: 'Delayed',
+  [POLISHING]: 'Polishing',
+  [FIXED]: 'Fixed',
 };
 
-const PRE_RELEASE = [
-  {
-    title: 'Deployed Example',
-    description: 'Deployed Description.',
-    status: DEPLOYED
-  },
-];
-
-const LONG_TERM = [
+/*
+const EXAMPLES = [
   {
     title: 'Completed Example',
     description: 'Completed Description.',
@@ -41,14 +38,36 @@ const LONG_TERM = [
     description: 'No Status Description.',
   },
   {
+    title: 'Deployed Example',
+    description: 'Deployed Description.',
+    status: DEPLOYED
+  },
+  {
     title: 'TBA Example',
     description: 'TBA'
+  }
+];
+*/
+
+const LONG_TERM = [
+  {
+    title: 'PROJECT BLOCKADE',
+    description: 'TBA.',
+    status: NEXT
+  },
+  {
+    title: 'PROJECT REMAIN',
+    description: 'TBA.',
+  },
+  {
+    title: 'PROJECT WRITHE',
+    description: 'TBA.'
   }
 ];
 
 const template = document.getElementById('item-template');
 
-const addItemsToGroups = function(group, items) {
+const addItemsToGroups = function (group, items) {
   items.forEach(item => {
     const element = template.cloneNode(true);
     if (item.status) {
@@ -64,5 +83,5 @@ const addItemsToGroups = function(group, items) {
 }
 
 //addItemsToGroups(document.getElementById('completed-items'), COMPLETED, true);
-addItemsToGroups(document.getElementById('pre-release-items'), PRE_RELEASE, false);
+//addItemsToGroups(document.getElementById('pre-release-items'), PRE_RELEASE, false);
 addItemsToGroups(document.getElementById('long-term-items'), LONG_TERM, false);
