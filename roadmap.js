@@ -61,7 +61,7 @@ const LONG_TERM = [
   },
   {
     title: 'PROJECT WRITHE',
-    description: 'TBA.'
+    description: 'Formerly known as "atfbox 2".'
   }
 ];
 
