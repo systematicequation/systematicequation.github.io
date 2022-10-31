@@ -56,6 +56,18 @@ const LONG_TERM = [
     status: NEXT,
     features: [
       {
+        title: "Character Customization",
+        description: "Make your character in the way you want it without all the clunkiness.",
+      },
+      {
+        title: "Weapon Customization",
+        description: "Make your enemies fear your might.",
+      },
+      {
+        title: "Weapon Customization",
+        description: "Add pouches where you want them, and anything else you'd ever want in an intuitive way.",
+      },
+      {
         title: "TBA.",
         description: "More features to be announced.",
       },
@@ -77,7 +89,7 @@ const LONG_TERM = [
     features: [
       {
         title: "World and Map Editor",
-        description: "Don't be stuck with what developers have made. Customize YOUR world, and YOUR map with unparalleled freedom.",
+        description: "Don't be stuck with what developers have made. Customize YOUR world and YOUR map with unparalleled freedom.",
       },
       {
         title: "TBA.",
