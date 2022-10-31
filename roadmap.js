@@ -45,7 +45,7 @@ const EXAMPLES = [
   {
     title: 'TBA Example',
     description: 'TBA'
-  }
+  },
 ];
 */
 
@@ -53,28 +53,94 @@ const LONG_TERM = [
   {
     title: 'PROJECT BLOCKADE',
     description: 'TBA.',
-    status: NEXT
+    status: NEXT,
+    features: [
+      {
+        title: "TBA.",
+        description: "More features to be announced.",
+      },
+    ],
   },
   {
     title: 'PROJECT REMAIN',
     description: 'TBA.',
+    features: [
+      {
+        title: "TBA.",
+        description: "More features to be announced.",
+      },
+    ],
   },
   {
     title: 'PROJECT WRITHE',
-    description: 'Formerly known as "atfbox 2".'
-  }
+    description: 'Formerly known as "atfbox 2".',
+    features: [
+      {
+        title: "World and Map Editor",
+        description: "Don't be stuck with what developers have made. Customize YOUR world, and YOUR map with unparalleled freedom.",
+      },
+      {
+        title: "TBA.",
+        description: "More features to be announced.",
+      },
+    ],
+  },
 ];
 
 const template = document.getElementById('item-template');
+
+const addSubmodules = function (item) {
+  if (item.features) {
+    document.getElementById('feature').innerHTML = "<div class='timeframefeature-label sans-font' id='feature-label'>" + item.title + "</div>";
+    item.features.forEach(feature => {
+      const element = template.cloneNode(true);
+      if (feature.status) {
+        element.firstElementChild.lastElementChild.innerHTML = STATUS_NAMES[feature.status];
+      }
+
+      element.className = `roadmap-item ${feature.status}`;
+      element.firstElementChild.lastElementChild.className = `item-status sans-font color-${feature.status}`;
+
+      element.firstElementChild.firstElementChild.innerHTML = feature.title;
+      if (feature.description) {
+        element.lastElementChild.innerHTML = feature.description;
+      } else {
+        element.lastElementChild.innerHTML = "";
+      }
+
+      element.id = '';
+
+      document.getElementById('feature').appendChild(element);
+
+    });
+    on()
+  }
+}
+
+document.getElementById("overlay-background").addEventListener("click", function () {
+  off()
+})
 
 const addItemsToGroups = function (group, items) {
   items.forEach(item => {
     const element = template.cloneNode(true);
     if (item.status) {
+      if (item.features) {
+        element.firstElementChild.lastElementChild.innerHTML = STATUS_NAMES[item.status] + "<br>view more"
+      } else {
+        element.firstElementChild.lastElementChild.innerHTML = STATUS_NAMES[item.status]
+      }
       element.className = `roadmap-item ${item.status}`;
-      element.firstElementChild.lastElementChild.innerHTML = STATUS_NAMES[item.status];
       element.firstElementChild.lastElementChild.className = `item-status sans-font color-${item.status}`;
+    } else {
+      if (item.features) {
+        element.firstElementChild.lastElementChild.innerHTML = "view more"
+      }
     }
+    element.addEventListener("click", function () {
+      addSubmodules(item)
+    });
+
     element.firstElementChild.firstElementChild.innerHTML = item.title;
     element.lastElementChild.innerHTML = item.description;
     element.id = '';
@@ -85,3 +151,11 @@ const addItemsToGroups = function (group, items) {
 //addItemsToGroups(document.getElementById('completed-items'), COMPLETED, true);
 //addItemsToGroups(document.getElementById('pre-release-items'), PRE_RELEASE, false);
 addItemsToGroups(document.getElementById('long-term-items'), LONG_TERM, false);
+
+function on() {
+  document.getElementById("overlay-background").style.display = "block";
+}
+
+function off() {
+  document.getElementById("overlay-background").style.display = "none";
+}
