@@ -3,6 +3,19 @@ body {
   background-color: black;
   height:100%;
   width: 100%;
+
+  animation: fadeInAnimation ease 3s;
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
+
+@keyframes fadeInAnimation {
+  0% {
+      opacity: 0;
+  }
+  100% {
+      opacity: 1;
+  }
 }
 
 a {
@@ -25,7 +38,7 @@ a {
 }
 
 #background {
-  background: linear-gradient(rgba(0, 0, 0, .25), rgba(0, 0, 0.75)), url('../images/background.png');
+  background: linear-gradient(rgba(0, 0, 0, .25), rgba(0, 0, 0.75)), url('../images/Background.png');
   background-position: center center;
   background-size: cover;
   background-repeat: repeat;
@@ -62,11 +75,27 @@ a {
   font-weight: bold;
   font-size: 24px;
   letter-spacing: 1px;
-  margin-top: 40px;
+  margin-top: 20px;
+}
+
+#roadmap-title {
+  font-weight: bold;
+  font-size: 42px;
+  
+  text-align: center;
 }
 
 #subtitle {
-  font-size: 18px;
+  font-size: 12px;
+  font-weight: bold;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  width: 100%;
+  text-align: center;
+}
+
+#Timer {
+  font-size: 22px;
   font-weight: bold;
   margin-top: 15px;
   margin-bottom: 15px;
@@ -76,7 +105,6 @@ a {
 
 #cta-buttons {
   width: 100%;
-  height: 50px;
   display: flex;
   justify-content: space-between;
   margin-top: 20px;
@@ -89,7 +117,7 @@ a {
 }
 
 .cta-button {
-  height: 100%;
+  width: 100%;
   display: flex;
   justify-content: space-between;
 }
@@ -111,6 +139,15 @@ a {
   font-weight: bold;
   font-size: 22px;
   color: #EEE;
+}
+
+.nav-label {
+  word-wrap: break-word;
+  flex-grow: 1;
+  text-align: center;
+  font-weight: bold;
+  font-size: 16px;
+  color: rgb(207, 207, 207);
 }
 
 #play-button {
@@ -143,23 +180,51 @@ a {
 
 #youtube-button {
   flex-basis: 48%;
-  background: #440000;
-  border: 1px solid #880000;
+  background: #167dbd59;
+  border: 1px solid #167dbda1;
 }
 
 #youtube-button:hover {
-  border: 1px solid #aa0000;
+  border: 1px solid #198acfb2;
 }
 
 #youtube-button:hover div {
-  color: #FFCCCC;
+  color: #ccfcff;
 }
+
+#character-button {
+  flex-basis: 48%;
+  margin-top: 30;
+  padding: 5;
+  margin-left: 29%;
+  width: 40%;
+  background: #535c3f75;
+  border: 1px solid #556931;
+}
+
+.nav-group {
+  align-items: center;
+  margin-top: 5%;
+  height: 20%;
+  width: 100%;
+  max-width: 600px;
+}
+
 
 .timeframe-label {
   font-weight: bold;
   font-size: 18px;
   margin-bottom: 10px;
   color: #CC6;
+}
+
+.timeframefeature-label {
+  font-weight: bold;
+  font-size: 18px;
+  position: relative;
+  text-align: center;
+  margin-bottom: 10px;
+  color: rgb(243, 222, 182);
 }
 
 .roadmap-item {
@@ -177,7 +242,7 @@ a {
 }
 
 .delayed {
-  background-color: rgba(255,127,0,0.1);
+  background-color: rgba(219, 17, 17, 0.1);
   border: 1px solid rgba(255,127,0,0.2);
 }
 
@@ -190,6 +255,15 @@ a {
   border: 1px solid rgba(0,255,0,0.2);
 }
 
+.fixed {
+  background-color: rgba(0,255,0,0.1);
+  border: 1px solid rgba(0,255,0,0.2);
+}
+
+.color-fixed {
+  color: rgb(80,160,80);
+}
+
 .color-deployed {
   color: rgb(80,160,80);
 }
@@ -197,6 +271,15 @@ a {
 .completed {
   background-color: rgba(0,127,255,0.1);
   border: 1px solid rgba(0,127,255,0.2);
+}
+
+.polishing {
+  background-color: rgba(133, 44, 160, 0.315);
+  border: 1px solid rgba(241, 85, 255, 0.2);
+}
+
+.color-polishing {
+  color: rgb(204, 115, 177);
 }
 
 .color-completed {
@@ -256,4 +339,49 @@ a {
     flex-basis: 100%;
     margin-bottom: 12px;
   }
+}
+
+
+
+#details-box{
+  font-size: 15px;
+  position: absolute;
+  left: 5%;
+  top:60%;
+  width: 90%;
+  height: 40%;
+}
+
+.center {
+  line-height: 20px;
+  height: 150px;
+  text-align: center;
+  }
+
+#text{
+  position: absolute;
+  font-size: 20px;
+  color: white;
+  box-sizing: border-box;
+  position: relative;
+}
+
+#overlay-background{
+  display:none;
+  position: fixed;
+  background-color: #000000ea;
+  z-index: 2;
+  top:0px;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+}
+#overlay {
+  height:100%;
+  width: 100%;
+  margin: 0 auto !important;
+}
+
+#feature-item {
+  margin-bottom: 30px;
 }
