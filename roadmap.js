@@ -64,7 +64,7 @@ const LONG_TERM = [
         description: "Make your enemies fear your might.",
       },
       {
-        title: "Weapon Customization",
+        title: "Vest Customization",
         description: "Add pouches where you want them, and anything else you'd ever want in an intuitive way.",
       },
       {
