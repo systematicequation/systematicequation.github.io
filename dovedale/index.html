@@ -210,15 +210,80 @@
     .header__controls { display: flex; align-items: center; gap: 16px; pointer-events: auto; }
     .select-wrapper { position: relative; display: flex; align-items: center; }
     .server-select {
-      appearance: none; background: var(--surface-2); border: 1px solid var(--border-hi);
-      border-radius: 99px; padding: 10px 42px 10px 20px; font-family: 'DM Sans', sans-serif;
-      font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer;
-      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: all 0.2s; outline: none;
+      appearance: none;
+      -webkit-appearance: none; /* Prevents Safari from injecting native iOS wheel styling */
+      -moz-appearance: none;
+      
+      background: var(--surface-2); 
+      border: 1px solid var(--border-hi);
+      border-radius: 99px; 
+      padding: 10px 42px 10px 20px; 
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; 
+      font-weight: 600; 
+      color: var(--text); 
+      cursor: pointer;
+      backdrop-filter: blur(16px); 
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4); 
+      transition: all 0.2s; 
+      outline: none;
     }
-    .server-select:hover, .server-select:focus { background: rgba(255,255,255,0.1); border-color: var(--amber); }
-    .server-select option { background: var(--ink); color: var(--text); }
+    .server-select:hover, .server-select:focus-visible { 
+      background: rgba(255,255,255,0.1); 
+      border-color: var(--amber); 
+    }
+    
+    /* Ensure dark dropdown options render clearly on compatible desktop platforms */
+    .server-select option { 
+      background-color: #0f172a; /* Solid color matching var(--surface-2) */
+      color: #f8fafc; 
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+    }
     .select-icon { position: absolute; right: 16px; width: 16px; height: 16px; stroke: var(--muted); pointer-events: none; }
+
+    /* ── Progressive Custom Select Enhancement ────────────────────── */
+    @supports (appearance: base-select) {
+      /* Opt-in the main select container cleanly without losing existing custom styles */
+      .server-select {
+        appearance: base-select;
+      }
+
+      /* Customize the native popover container when expanded */
+      .server-select::picker(select) {
+        appearance: base-select;
+        background: var(--surface-3) !important;
+        border: 1px solid var(--border-hi) !important;
+        border-radius: 16px !important;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        padding: 6px !important;
+      }
+
+      /* Customize options inside the base-select dropdown picker */
+      .server-select option {
+        padding: 8px 16px !important;
+        border-radius: 6px !important;
+        background: transparent !important;
+        cursor: pointer !important;
+        color: var(--muted) !important;
+        transition: background 0.15s ease, color 0.15s ease !important;
+      }
+
+      /* Hover highlight replacement */
+      .server-select option:hover {
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: var(--text) !important;
+      }
+
+      /* Active/Checked state style */
+      .server-select option:checked {
+        background: rgba(59, 130, 246, 0.15) !important;
+        color: var(--text) !important;
+      }
+    }
 
     .chip {
       display: inline-flex; align-items: center; gap: 10px; background: rgba(15,23,42,0.8);
@@ -598,6 +663,7 @@
     let selectedUsername = null;
     let isFollowing = false;
     let isZooming = false; // Viewport Pruning Lock
+    let cachedPaddedBounds = null;
 
     const isMobileLike = () => window.innerWidth <= 768;
 
@@ -764,11 +830,78 @@
       return hasNoHeadcode || hasNoDest;
     }
 
-    function isSpadRisk(player) {
+    function isSpadRisk(player, entry = null) {
       if (!player || !player.trainData) return false;
       const speed = player.speed || 0;
-      if (speed < 1.5) return false;
-      return hasNoActiveRoute(player);
+      if (speed < 1.5) {
+        if (entry) entry.spadTicks = 0;
+        return false;
+      }
+      const unrouted = hasNoActiveRoute(player);
+      if (!unrouted) {
+        if (entry) entry.spadTicks = 0;
+        return false;
+      }
+      
+      // Stateful network packet processing with debounce check
+      if (entry) {
+        entry.spadTicks = (entry.spadTicks || 0) + 1;
+        return entry.spadTicks >= 2; 
+      }
+      
+      // UI Rendering / Display passes (instant check)
+      return true;
+    }
+
+    function getSectorData(player, dx, dy, entry = null) {
+      let minDistance = Infinity;
+      let nearestName = "Unknown";
+      
+      const px = Number(player.position.x) || 0;
+      const py = Number(player.position.y || player.position.z) || 0;
+
+      for (const [name, pos] of Object.entries(AREA_MARKERS)) {
+        const dist = Math.hypot(px - pos.x, py - pos.y);
+        if (dist < minDistance) { minDistance = dist; nearestName = name; }
+      }
+      
+      const isTrain = !!player.trainData;
+      if (!isTrain) {
+        const status = minDistance < 1500 ? `At ${nearestName}` : `Near ${nearestName}`;
+        return { station: nearestName, status };
+      }
+      
+      const speed = player.speed !== undefined ? player.speed : Math.hypot(dx, dy);
+      const spad = isSpadRisk(player, entry);
+      let status = "";
+      
+      if (spad) {
+        status = `SPAD Risk @ ${nearestName}`;
+        return { station: nearestName, status, spad };
+      }
+      
+      const hasNoRoute = !player.trainData.headcode || player.trainData.headcode === "----" || !player.trainData.destination || player.trainData.destination.toLowerCase() === "unselected";
+      
+      if (speed < 1.5) {
+        if (hasNoRoute) {
+          status = minDistance < 1200 ? `No Route @ ${nearestName}` : "No Route (Siding)";
+        } else {
+          status = minDistance < 1200 ? `At ${nearestName}` : `Near ${nearestName}`;
+        }
+      } else {
+        const stationPos = AREA_MARKERS[nearestName];
+        const sx = stationPos.x - px;
+        const sy = stationPos.y - py;
+        const dotProduct = sx * dx + sy * dy;
+        
+        if (minDistance < 1500) {
+          status = dotProduct > 0 ? `Arriving at ${nearestName}` : `Departing ${nearestName}`;
+        } else {
+          status = dotProduct > 0 ? `En Route near ${nearestName}` : `Leaving ${nearestName} area`;
+        }
+      }
+      
+      return { station: nearestName, status, spad: false };
     }
 
     function getTrainColor(headcode, player) {
@@ -820,6 +953,12 @@
     map.on('zoomend', () => { isZooming = false; updateMapVisibility(); }); // Viewport lock disengaged
     map.on('moveend dragend', () => setTimeout(() => document.body.classList.remove('map-moving'), 50));
     map.on('click', () => selectPlayer(null));
+
+    function updateCachedBounds() {
+      cachedPaddedBounds = map.getBounds().pad(0.15);
+    }
+    map.on('moveend zoomend resize', updateCachedBounds);
+    updateCachedBounds(); // Populate the initial bounds right away
 
     function updateIconScale() {
       const zoom = map.getZoom();
@@ -926,17 +1065,9 @@
           if (entry.isSelected !== isSelected) {
             entry.isSelected = isSelected;
             
-            const el = entry.marker.getElement();
-            if (el) {
-              const mkEl = el.querySelector('.mk');
-              if (mkEl) {
-                mkEl.classList.toggle('mk--selected', isSelected);
-                const themeColor = entry.data.trainData ? getTrainColor(entry.data.trainData.headcode, entry.data) : 'var(--blue)';
-                mkEl.style.setProperty('--sel-color', themeColor);
-              }
-            } else {
-              entry.marker.setIcon(buildIcon(entry.data, entry.angle, isSelected));
-            }
+            // Rebuilding the icon template using setIcon ensures Leaflet option
+            // options stay aligned with real-time culling state
+            entry.marker.setIcon(buildIcon(entry.data, entry.renderAngle ?? entry.angle ?? 0, isSelected));
             entry.marker.setZIndexOffset(isSelected ? 1000 : (entry.data.trainData ? 100 : 0));
           }
         }
@@ -1025,16 +1156,20 @@
       if (!card.classList.contains('active')) return;
       
       const sector = getSectorData(player, dx, dy);
-      const themeColor = getTrainColor(player.trainData?.headcode, player);
+      const hasTrain = !!player.trainData;
+      const themeColor = hasTrain ? getTrainColor(player.trainData.headcode, player) : 'var(--blue)';
       const spad = isSpadRisk(player);
       
       const speed = player.speed || 0;
-      const mph = Math.round(speed * SPS_TO_MPH);
-      setDOMText('pc-speed', speed < 1.5 ? 'Speed: Stationary' : `Speed: ${mph} mph (${Math.round(speed)} studs/s)`);
+      setDOMText('pc-speed', speed < 1.5 ? 'Speed: Stationary' : `Speed: ${Math.round(speed)} studs/s`);
       
       const badgeEl = document.getElementById('pc-status-badge');
       if (badgeEl.textContent !== sector.status) {
         badgeEl.textContent = sector.status;
+      }
+      
+      // Keep badge accent colors synced with the active vehicle/status theme
+      if (badgeEl.style.background !== themeColor) {
         badgeEl.style.background = themeColor;
         badgeEl.style.boxShadow = `0 0 16px ${themeColor}40`;
       }
@@ -1046,15 +1181,33 @@
         if (spad) bannerEl.textContent = '⚠ POTENTIAL SPAD RISK (NO ROUTE)';
       }
       
-      if (player.trainData) {
+      // Update card metadata conditionally based on whether they are in a train or on foot
+      if (hasTrain) {
+        const rawHeadcode = player.trainData.headcode;
+        const displayHeadcode = (!rawHeadcode || rawHeadcode === "" || rawHeadcode === "----" || rawHeadcode.toLowerCase() === "unknown") ? "UNROUTED" : rawHeadcode;
+        setDOMText('pc-title', displayHeadcode);
+        
+        const titleEl = document.getElementById('pc-title');
+        if (titleEl.style.color !== themeColor) titleEl.style.color = themeColor;
+        
+        setDOMText('pc-subtitle', player.trainData.trainClass || 'Train');
         setDOMText('pc-dest', `Bound for ${player.trainData.destination || 'Not Set'}`);
+        setDOMDisplay('pc-dest-row', 'flex');
+      } else {
+        setDOMText('pc-title', player.username);
+        
+        const titleEl = document.getElementById('pc-title');
+        if (titleEl.style.color !== 'var(--blue)') titleEl.style.color = 'var(--blue)';
+        
+        setDOMText('pc-subtitle', 'On Foot');
+        setDOMDisplay('pc-dest-row', 'none');
       }
     }
 
     function renderMotionFrame(now = performance.now()) {
       let selectedRender = null;
-      const bounds = map.getBounds(); 
-      const paddedBounds = bounds.pad(0.1); 
+      const bounds = map.getBounds();
+      const paddedBounds = cachedPaddedBounds || map.getBounds().pad(0.15);
 
       for (const [jobId, srv] of servers.entries()) {
         const isVisible = currentServerId === 'all' || currentServerId === jobId;
@@ -1063,7 +1216,15 @@
         for (const entry of srv.values()) {
           const motion = resolveMotionState(entry, now);
           entry.renderAngle = motion.angle;
-          entry.renderLatLng = motion.latlng;
+
+          // Re-use LatLng cache instead of allocating hundreds of objects per frame
+          if (!entry.latLngCache) {
+            entry.latLngCache = L.latLng(-motion.y, motion.x);
+          } else {
+            entry.latLngCache.lat = -motion.y;
+            entry.latLngCache.lng = motion.x;
+          }
+          entry.renderLatLng = entry.latLngCache;
 
           if (entry.marker) {
             // Viewport Pruning Lock during zooms to prevent layout ghost offsets
@@ -1165,7 +1326,7 @@
     }
 
     function updateMapVisibility() {
-      const bounds = map.getBounds().pad(0.1);
+      const bounds = cachedPaddedBounds || map.getBounds().pad(0.15);
       for (const [jobId, srvMap] of servers.entries()) {
         const isVisible = (currentServerId === 'all' || currentServerId === jobId);
         for (const player of srvMap.values()) {
@@ -1181,31 +1342,51 @@
 
     function updateDropdown() {
       const select = document.getElementById('server-select');
-      if (document.activeElement === select) return;
+      if (!select) return;
 
-      const currentHash = Array.from(servers.keys()).sort().join(',');
-      if (select.dataset.hash === currentHash) {
-        for (const [jobId, srvMap] of servers.entries()) {
-          const opt = Array.from(select.options).find(o => o.value === jobId);
-          if (opt) opt.textContent = `Server ${jobId.substring(0,6)} (${srvMap.size} players)`;
-        }
-        return;
-      }
+      const hasServers = select.options.length > 1;
+      const isFocused = document.activeElement === select;
+
+      // Prevent rebuilding the dropdown options if the user is actively using it
+      if (isFocused && hasServers) return;
+
+      // Hash tracking includes both the server identities and their counts for active updates
+      const currentHash = Array.from(servers.entries())
+        .map(([jobId, srvMap]) => `${jobId}:${srvMap.size}`)
+        .sort()
+        .join(',');
+
+      if (select.dataset.hash === currentHash) return;
       select.dataset.hash = currentHash;
 
+      // Sort servers descending by player count, falling back to alphabetical for stability
+      const sortedServers = Array.from(servers.entries()).sort((a, b) => {
+        const diff = b[1].size - a[1].size;
+        if (diff !== 0) return diff;
+        return String(a[0]).localeCompare(String(b[0])); // Cast strictly to String to prevent numeric jobId TypeErrors
+      });
+
       let html = `<option value="all">View All Servers</option>`;
-      for (const [jobId, srvMap] of servers.entries()) {
+      for (const [jobId, srvMap] of sortedServers) {
         const selected = (jobId === currentServerId) ? 'selected' : '';
         const safeJobId = esc(jobId);
-        html += `<option value="${safeJobId}" ${selected}>Server ${safeJobId.substring(0,6)} (${srvMap.size} players)</option>`;
+        const count = srvMap.size;
+        html += `<option value="${safeJobId}" ${selected}>Server ${safeJobId.substring(0,6)} (${count} player${count === 1 ? '' : 's'})</option>`;
       }
-      select.innerHTML = html;
-      
-      if (!servers.has(currentServerId) && currentServerId !== 'all') {
-        currentServerId = 'all'; select.value = 'all';
-        updateMapVisibility(); schedPaint();
-      }
-      syncPanelJoinVisibility();
+
+      // Deferring the DOM insertion outside of the requestAnimationFrame context
+      // prevents Chrome/WebKit from delaying the native <select> repaint
+      setTimeout(() => {
+        select.innerHTML = html;
+        void select.offsetHeight; // Forces a synchronous layout redraw in the rendering engine
+        
+        // Clean up fallback selections cleanly inside the same macro-task
+        if (!servers.has(currentServerId) && currentServerId !== 'all') {
+          currentServerId = 'all'; select.value = 'all';
+          updateMapVisibility(); schedPaint();
+        }
+        syncPanelJoinVisibility();
+      }, 0);
     }
 
     function syncPanelJoinVisibility() {
@@ -1241,15 +1422,23 @@
       if (srv.has(player.username)) {
         const entry = srv.get(player.username);
         if (!entry.motion) entry.motion = { samples: [] };
+
+        // Calculate dt BEFORE pushing the new sample to performance history
+        const prevUpdate = entry.motion.lastUpdate || (now - 1000);
+        const dt = Math.max(0.1, (now - prevUpdate) / 1000);
+
         pushMotionSample(entry.motion, px, py, now);
 
-        let dx = px - entry.data.position.x;
-        let dy = py - entry.data.position.y;
+        // Bulletproof coordinates parsing prevents silent NaNs with different payloads
+        const prevX = Number(entry.data.position.x) || 0;
+        const prevY = Number(entry.data.position.y || entry.data.position.z) || 0;
+        
+        let dx = px - prevX;
+        let dy = py - prevY;
         
         const distanceMoved = Math.hypot(dx, dy);
         let speed = 0;
         if (distanceMoved < 2000) {
-          const dt = Math.max(0.1, (now - entry.motion.lastUpdate) / 1000);
           speed = distanceMoved / dt;
         } else {
           dx = 0;
@@ -1257,11 +1446,14 @@
         }
         player.speed = speed;
 
-        const sector = getSectorData(player, dx, dy);
+        const sector = getSectorData(player, dx, dy, entry);
 
         if (entry.lastStatus !== sector.status) {
           if (sector.spad && sector.status.startsWith("SPAD")) {
-            triggerRipple(latlng, '#ef4444', true);
+            // Only spawn visual circle waves for servers currently active in the map view
+            if (currentServerId === 'all' || currentServerId === jobId) {
+              triggerRipple(latlng, '#ef4444', true);
+            }
           }
         }
         
@@ -1294,7 +1486,7 @@
         if ((currentServerId === 'all' || currentServerId === jobId) && bounds.contains(latlng)) {
           marker.addTo(map);
         }
-        const sector = getSectorData(player, 0, 0);
+        const sector = getSectorData(player, 0, 0, null);
         srv.set(player.username, {
           marker,
           data: player,
@@ -1307,6 +1499,7 @@
           motion: { samples: [{ time: now, x: px, y: py }], lastUpdate: now },
           lastStatus: sector.status,
           lastSeen: wallNow,
+          spadTicks: 0
         });
         return true;
       }
@@ -1436,7 +1629,17 @@
       const spadNote = document.getElementById('panel-spad-note');
       if (spadNote) spadNote.classList.toggle('active', trains.some((t) => t.sector.spad));
 
-      const stateHash = JSON.stringify(trains.map(t=>t.rec.username+(t.rec.trainData?.headcode || '')+t.sector.status+(t.entry.isSelected?'1':'0'))) + JSON.stringify(persons.map(p=>p.rec.username+p.sector.status+(p.entry.isSelected?'1':'0')));
+      // Optimized string builder loop to bypass array instantiation and JSON serialization overhead
+      let stateHash = '';
+      for (let i = 0; i < trains.length; i++) {
+        const t = trains[i];
+        stateHash += t.rec.username + (t.rec.trainData?.headcode || '') + t.sector.status + (t.entry.isSelected ? '1' : '0');
+      }
+      for (let i = 0; i < persons.length; i++) {
+        const p = persons[i];
+        stateHash += p.rec.username + p.sector.status + (p.entry.isSelected ? '1' : '0');
+      }
+
       if (body.dataset.hash === stateHash) return;
       body.dataset.hash = stateHash;
 
@@ -1625,6 +1828,8 @@
       currentServerId = e.target.value;
       updateMapVisibility(); schedPaint();
       syncPanelJoinVisibility();
+
+      e.target.blur();
     });
 
     const searchInput = document.getElementById('panel-search');
