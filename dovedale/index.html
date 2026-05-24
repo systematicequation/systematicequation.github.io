@@ -583,7 +583,8 @@
 
     const WS_URL = 'wss://map.dovedale.wiki/api/ws';
     const WORLD_BOUNDS = { TOP_LEFT: { x: -23818, y: -10426 }, BOTTOM_RIGHT: { x: 20504, y: 11377 } };
-    
+    const SPS_TO_MPH = 0.626342;
+
     const AREA_MARKERS = {
       "Gleethrop End": { x: 1274, y: 3563 }, "Groenewoud": { x: -14658, y: -3762 }, "Dovedale East": { x: 1231, y: 534 },
       "Fanory Mill": { x: -16821, y: -3954 }, "Mazewood": { x: -4650, y: 5798 }, "Conby": { x: -11688, y: -3270 },
@@ -976,7 +977,8 @@
         setDOMText('pc-server', `Server: ${foundJobId.substring(0,8)}`);
         
         const speed = found.data.speed || 0;
-        setDOMText('pc-speed', speed < 1.5 ? 'Speed: Stationary' : `Speed: ${Math.round(speed)} studs/s`);
+        const mph = Math.round(speed * SPS_TO_MPH);
+        setDOMText('pc-speed', speed < 1.5 ? 'Speed: Stationary' : `Speed: ${mph} mph (${Math.round(speed)} studs/s)`);
 
         const badgeEl = document.getElementById('pc-status-badge');
         setDOMText('pc-status-badge', sector.status);
@@ -1027,7 +1029,8 @@
       const spad = isSpadRisk(player);
       
       const speed = player.speed || 0;
-      setDOMText('pc-speed', speed < 1.5 ? 'Speed: Stationary' : `Speed: ${Math.round(speed)} studs/s`);
+      const mph = Math.round(speed * SPS_TO_MPH);
+      setDOMText('pc-speed', speed < 1.5 ? 'Speed: Stationary' : `Speed: ${mph} mph (${Math.round(speed)} studs/s)`);
       
       const badgeEl = document.getElementById('pc-status-badge');
       if (badgeEl.textContent !== sector.status) {
