@@ -1,0 +1,1660 @@
+<!--
+  HonorWithin's Dovedale Livemap
+  Copyright (c) 2026 HonorWithin
+
+  This source code is licensed under the MIT license found in the
+  LICENSE file in the root directory of this source tree.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>HonorWithin's Dovedale Livemap</title>
+
+  <!-- Leaflet 1.9.4 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Core Theme & Signaling Desk Colors ─────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:        #030712; /* Deep CRT monitor black */
+      --surface:    rgba(15, 23, 42, 0.85);
+      --surface-2:  rgba(30, 41, 59, 0.90);
+      --surface-3:  rgba(51, 65, 85, 0.95);
+      --border:     rgba(96, 165, 250, 0.15);
+      --border-hi:  rgba(96, 165, 250, 0.30);
+
+      --amber:      #f59e0b;
+      --green:      #10b981;
+      --blue:       #3b82f6;
+      --red:        #ef4444; 
+      --purple:     #a855f7; 
+      --magenta:    #d946ef;
+      
+      --text:       #f8fafc;
+      --muted:      #94a3b8;
+      --dim:        #475569;
+
+      --panel-w:    380px;
+      --hdr-h:      76px;
+      
+      font-family: 'DM Sans', system-ui, sans-serif;
+      font-size: 14px;
+      color-scheme: dark;
+      
+      --icon-scale: 1; 
+      --show-label: flex; 
+      --show-person-label: flex;
+      --show-stations: block;
+      --ticker-animation: none;
+      --ticker-y: 0px; 
+    }
+
+    html, body {
+      height: 100dvh; overflow: hidden;
+      background: var(--ink); color: var(--text);
+    }
+
+    /* ── Immersive CRT Radar Background ─────────────────────────────── */
+    #map {
+      position: fixed; inset: 0; z-index: 0;
+      background-color: var(--ink);
+      /* Organic, faint dot-matrix CRT phosphor glow */
+      background-image: 
+        radial-gradient(circle at center, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
+        radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 100% 100%, 24px 24px;
+    }
+    
+    /* Strict global pixel-art nearest-neighbor scaling overrides */
+    .leaflet-container,
+    .leaflet-pane,
+    .leaflet-zoom-animated,
+    .leaflet-image-layer,
+    .leaflet-tile,
+    .leaflet-pane img,
+    .leaflet-container img {
+      image-rendering: -webkit-optimize-contrast !important; 
+      image-rendering: -moz-crisp-edges !important;          
+      image-rendering: crisp-edges !important;               
+      image-rendering: pixelated !important;                 
+      -ms-interpolation-mode: nearest-neighbor !important;   
+    }
+    
+    /* Subtle vignette to ground the screen */
+    #map::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 400;
+      box-shadow: inset 0 0 120px rgba(0,0,0,0.8);
+    }
+
+    /* Leaflet Overrides */
+    .leaflet-control-zoom { border: 1px solid var(--border-hi) !important; border-radius: 8px !important; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.8) !important; z-index: 950 !important; margin-bottom: max(24px, env(safe-area-inset-bottom)) !important; margin-right: max(24px, env(safe-area-inset-right)) !important; }
+    .leaflet-control-zoom a { background: rgba(15, 23, 42, 0.9) !important; color: var(--text) !important; backdrop-filter: blur(12px); border-bottom: 1px solid var(--border) !important; width: 44px !important; height: 44px !important; line-height: 44px !important; font-size: 18px !important; font-weight: 300 !important; }
+    .leaflet-control-zoom a:last-child { border-bottom: none !important; }
+    .leaflet-control-zoom a:hover { background: rgba(59, 130, 246, 0.2) !important; color: var(--text) !important; }
+    .leaflet-control-attribution { display: none; }
+
+    .leaflet-top.leaflet-right { margin-top: calc(var(--hdr-h) + 16px) !important; margin-right: max(24px, env(safe-area-inset-right)) !important; }
+
+    /* ── Map Markers & Station Labels ───────────────────────────────── */
+    .custom-marker { background: none; border: none; outline: none; }
+
+    /* Station Text */
+    .area-label {
+      display: var(--show-stations, block);
+      font-size: 14px; font-weight: 700; letter-spacing: 0.15em;
+      color: rgba(248, 250, 252, 0.45); text-transform: uppercase;
+      -webkit-text-stroke: 3px #000;
+      paint-order: stroke fill;
+      white-space: nowrap; text-align: center;
+      transform: translate(-50%, -50%) scale(var(--icon-scale));
+      transform-origin: center center; pointer-events: none;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    body:not(.map-moving) .custom-marker { transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+
+    .mk {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      user-select: none; transform: scale(var(--icon-scale)); will-change: transform; cursor: pointer;
+      text-rendering: geometricPrecision; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    }
+    .mk--train { transform-origin: 36px 16px; }
+    
+    .mk--person { 
+      transform-origin: 40px 6px; 
+      opacity: 1;
+      transition: opacity 0.2s;
+    }
+
+    .mk__graphic-train {
+      width: 34px; height: 14px; position: relative;
+      transform: rotate(var(--angle, 0rad));
+    }
+    .mk__graphic-person {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--blue); border: 2px solid #fff;
+      box-shadow: 0 0 12px rgba(59,130,246,0.6);
+    }
+
+    /* Split-Flap Map Labels */
+    .mk__label {
+      color: #fff; line-height: 1; margin-top: 6px;
+      background: rgba(15, 23, 42, 0.95); border-radius: 6px; 
+      backdrop-filter: blur(8px); border: 1px solid var(--border-hi); 
+      white-space: nowrap; box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+      transition: border-color 0.2s, box-shadow 0.2s; overflow: hidden;
+    }
+    
+    .mk--train .mk__label { display: var(--show-label, flex); }
+    .mk--person .mk__label { display: var(--show-person-label, flex); opacity: 0.75; }
+    .mk--selected .mk__label { display: flex !important; opacity: 1 !important; }
+    
+    .mk__label-ticker { height: 16px; overflow: hidden; position: relative; width: 90px; }
+    
+    .mk__ticker-inner {
+      display: flex; flex-direction: column; height: 32px;
+      animation: var(--ticker-animation, none);
+      transform: translateY(var(--ticker-y, 0px));
+    }
+    .mk__ticker-item { height: 16px; line-height: 16px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mk--train .mk__ticker-item { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; }
+    .mk__dest { display: block; font-size: 8px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .mk--selected .mk__ticker-inner { animation: marker-ticker 6.5s cubic-bezier(0.76, 0, 0.24, 1) infinite !important; }
+
+    @keyframes marker-ticker {
+      0%, 42% { transform: translateY(0); }
+      50%, 92% { transform: translateY(-16px); }
+      100% { transform: translateY(0); }
+    }
+
+    .mk--person .mk__label { padding: 5px 10px; }
+    .mk--person .mk__name { font-size: 11.5px; font-weight: 600; letter-spacing: 0.01em; }
+
+    /* Selection Glow */
+    .mk--selected { z-index: 1000 !important; }
+    .mk--selected .mk__label {
+      display: flex !important; border-color: var(--sel-color, #fff) !important;
+      box-shadow: 0 0 0 2px var(--sel-color, rgba(255,255,255,0.8)), 0 12px 32px rgba(0,0,0,0.9) !important;
+    }
+    .mk--selected .mk__dest { display: block !important; }
+    .mk--selected .mk__graphic-train { filter: drop-shadow(0 0 14px var(--sel-color, var(--green))); }
+    .mk--selected .mk__graphic-person { border-color: var(--sel-color, var(--blue)); box-shadow: 0 0 0 3px var(--sel-color); }
+
+    /* Radar Ping Wave Styling */
+    .ripple-wave { stroke-linecap: round; filter: drop-shadow(0 0 4px currentColor); pointer-events: none; }
+
+    /* ── Header UI ──────────────────────────────────────────────────── */
+    #header {
+      position: fixed; top: 0; left: 0; right: 0; padding-top: env(safe-area-inset-top);
+      height: calc(var(--hdr-h) + env(safe-area-inset-top)); z-index: 800;
+      display: flex; align-items: center; justify-content: space-between; padding-inline: 32px;
+      background: linear-gradient(to bottom, rgba(3,7,18,0.95) 0%, rgba(3,7,18,0.5) 60%, transparent 100%); pointer-events: none;
+    }
+    .header__brand { display: flex; align-items: baseline; gap: 12px; pointer-events: auto; }
+    .header__logo { font-family: 'Playfair Display', Georgia, serif; font-size: 26px; font-weight: 700; color: var(--text); text-shadow: 0 4px 24px rgba(0,0,0,0.9); letter-spacing: -0.02em; }
+    
+    .header__controls { display: flex; align-items: center; gap: 16px; pointer-events: auto; }
+    .select-wrapper { position: relative; display: flex; align-items: center; }
+    .server-select {
+      appearance: none; background: var(--surface-2); border: 1px solid var(--border-hi);
+      border-radius: 99px; padding: 10px 42px 10px 20px; font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: all 0.2s; outline: none;
+    }
+    .server-select:hover, .server-select:focus { background: rgba(255,255,255,0.1); border-color: var(--amber); }
+    .server-select option { background: var(--ink); color: var(--text); }
+    .select-icon { position: absolute; right: 16px; width: 16px; height: 16px; stroke: var(--muted); pointer-events: none; }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 10px; background: rgba(15,23,42,0.8);
+      border: 1px solid var(--border-hi); border-radius: 99px; padding: 10px 20px;
+      font-size: 12px; font-weight: 600; color: var(--text); backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .chip__led { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); transition: background 0.4s, box-shadow 0.4s; }
+    .chip__led.live { background: var(--green); box-shadow: 0 0 12px rgba(16,185,129,0.8); animation: led-blink 2.5s infinite; }
+    .chip__led.error { background: var(--red); box-shadow: 0 0 12px rgba(244,63,94,0.8); }
+    @keyframes led-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    .join-link {
+      display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px;
+      border-radius: 999px; border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.04); color: var(--text); text-decoration: none;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.03em; backdrop-filter: blur(16px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.22); transition: background 0.2s, border-color 0.2s, transform 0.2s;
+    }
+    .join-link:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.26); }
+    .join-link:active { transform: translateY(1px); }
+    .join-link svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* ── Floating Mobile / Desktop Toggles ──────────────────────────── */
+    #mobile-fab {
+      display: none; position: fixed; bottom: max(24px, env(safe-area-inset-bottom));
+      left: 50%; transform: translateX(-50%); z-index: 900;
+      background: rgba(248, 250, 252, 0.96); color: var(--ink); border: 1px solid rgba(255,255,255,0.55);
+      padding: 14px 22px; border-radius: 999px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 800;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.45); cursor: pointer; align-items: center; gap: 8px;
+      transition: transform 0.2s, filter 0.2s, background 0.2s;
+    }
+    #mobile-fab:active { transform: translateX(-50%) scale(0.95); filter: brightness(0.9); }
+
+    #desktop-toggle {
+      position: fixed; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 850;
+      background: rgba(248, 250, 252, 0.96); color: var(--ink); border: 1px solid rgba(255,255,255,0.55);
+      padding: 14px 22px; border-radius: 999px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 800;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.45); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      transition: transform 0.2s, filter 0.2s, background 0.2s;
+    }
+    #desktop-toggle:hover { background: rgba(255,255,255,0.98); filter: brightness(0.98); }
+    #desktop-toggle:active { transform: translateX(-50%) scale(0.98); filter: brightness(0.94); }
+    #desktop-toggle svg { width: 20px; height: 20px; flex-shrink: 0; color: var(--ink); }
+    .desktop-toggle__label { white-space: nowrap; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 800; letter-spacing: 0.02em; text-transform: none; color: var(--ink); }
+
+    /* ── Selected Player Telemetry Card ─────────────────────────────── */
+    #player-card {
+      position: fixed; left: 32px; bottom: max(32px, env(safe-area-inset-bottom));
+      background: var(--surface); backdrop-filter: blur(32px) saturate(140%); -webkit-backdrop-filter: blur(32px) saturate(140%);
+      border: 1px solid var(--border-hi); border-radius: 20px;
+      padding: 22px; z-index: 850; width: 300px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.8);
+      transform: translateY(120%); opacity: 0; pointer-events: none;
+      transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s;
+    }
+    #player-card.active { transform: translateY(0); opacity: 1; pointer-events: auto; }
+
+    .pc-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; width: 100%; }
+    .pc-title-group { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+    .pc-headcode { 
+      font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 700; 
+      color: var(--color, var(--amber)); line-height: 1; transition: color 0.2s; 
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+    }
+    .pc-subtitle { 
+      font-size: 13px; font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 6px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pc-close { 
+      flex-shrink: 0; background: rgba(255,255,255,0.05); border: 1px solid transparent; 
+      color: var(--muted); cursor: pointer; padding: 6px; border-radius: 50%; transition: all 0.2s; display: flex; 
+    }
+    .pc-close:hover { background: rgba(255,255,255,0.1); color: var(--text); border-color: var(--border-hi); }
+    
+    .pc-meta { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; min-width: 0; }
+    .pc-row-badge-container { display: flex; flex-direction: column; min-width: 0; }
+    .pc-status-badge { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #000; padding: 6px 14px; border-radius: 6px; display: inline-block; margin-bottom: 8px; transition: background 0.22s, box-shadow 0.22s; width: fit-content; }
+    
+    .pc-warning-banner { 
+      display: none; background: rgba(239, 68, 68, 0.15); border: 1px dashed var(--red); 
+      color: #fecdd3; font-family: 'JetBrains Mono', monospace; font-size: 11px; 
+      font-weight: 700; padding: 8px 12px; border-radius: 8px; text-align: center; 
+      margin-bottom: 12px; width: 100%; box-shadow: 0 0 16px rgba(239, 68, 68, 0.15); 
+    }
+    
+    .pc-row { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--text); font-weight: 500; min-width: 0; }
+    .pc-row svg { color: var(--dim); flex-shrink: 0; }
+    .pc-row span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .pc-actions { display: flex; gap: 12px; }
+    .pc-btn { flex: 1; display: inline-flex; justify-content: center; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); border: 1px solid var(--border-hi); border-radius: 12px; padding: 12px; font-size: 13px; font-weight: 700; color: var(--text); cursor: pointer; transition: all 0.2s; }
+    .pc-btn:hover { background: rgba(255,255,255,0.12); }
+    .pc-btn.following { background: rgba(59, 130, 246, 0.2); border-color: var(--blue); color: #fff; box-shadow: 0 4px 24px rgba(59, 130, 246, 0.3); }
+
+    /* ── Sidebar Terminal List ──────────────────────────────────────── */
+    #panel {
+      position: fixed; top: calc(var(--hdr-h) + 16px); right: 24px; bottom: max(24px, env(safe-area-inset-bottom));
+      width: var(--panel-w); z-index: 840; background: linear-gradient(180deg, rgba(15,23,42,0.92), rgba(15,23,42,0.82));
+      backdrop-filter: blur(32px) saturate(140%); -webkit-backdrop-filter: blur(32px) saturate(140%); border: 1px solid var(--border-hi);
+      border-radius: 28px; display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 30px 72px rgba(0,0,0,0.72); transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
+    }
+    body.panel-hidden #panel { transform: translateX(calc(100% + 36px)); opacity: 0; pointer-events: none; }
+
+    #panel::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.35; z-index: 100;
+      background: radial-gradient(circle at top left, rgba(255,255,255,0.05), transparent 30%), linear-gradient(rgba(15, 23, 42, 0) 50%, rgba(0, 0, 0, 0.16) 50%);
+      background-size: auto, 100% 4px; 
+    }
+
+    .panel__hdr { padding: 24px 24px 20px; border-bottom: 1px solid var(--border); background: linear-gradient(to bottom, rgba(255,255,255,0.05), transparent); flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+    .panel__hdr-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .panel__hdr-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .panel__hdr-kicker { font-size: 10px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+    .panel__hdr-title { font-family: 'DM Sans', system-ui, sans-serif; font-size: 18px; font-weight: 700; letter-spacing: 0.02em; color: var(--text); }
+    .panel__hdr-sub { font-size: 12px; font-weight: 400; color: var(--muted); line-height: 1.45; }
+    .panel__toolbar { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+    
+    /* Elegant Lightweight Dropdown Changelog */
+    .changelog-container { display: flex; flex-direction: column; width: 100%; }
+    .changelog-toggle {
+      display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; 
+      padding: 8px 12px; color: var(--text); font-size: 11px; font-weight: 700; 
+      cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.2s; 
+    }
+    .changelog-toggle:hover { background: rgba(255,255,255,0.08); border-color: var(--amber); }
+    .changelog-content { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    .changelog-content.open { grid-template-rows: 1fr; }
+    .changelog-content-wrapper { overflow: hidden; }
+    .changelog-content__inner {
+      font-size: 11.5px; color: rgba(248, 250, 252, 0.85); line-height: 1.45;
+      background: rgba(0,0,0,0.25); padding: 12px 14px; border-radius: 8px; border-left: 3px solid var(--blue);
+      display: flex; flex-direction: column; gap: 6px; margin-top: 8px;
+    }
+    .changelog-content__inner p { margin: 0; }
+    .changelog-content__inner ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+    .panel__join-row { display: flex; }
+    .panel__join-row[hidden] { display: none; }
+    .panel__join-row .join-link { width: 100%; justify-content: center; }
+    .panel-join-link { background: rgba(16, 185, 129, 0.18); border-color: rgba(16, 185, 129, 0.42); color: #d1fae5; }
+    .panel-join-link:hover { background: rgba(16, 185, 129, 0.24); border-color: rgba(16, 185, 129, 0.55); }
+    
+    .panel__stats { display: flex; flex-wrap: nowrap; gap: 6px; min-width: 0; }
+    .panel-stat { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--text); font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .panel-stat--summary { flex: 1 1 auto; }
+    .panel-stat--dim { color: var(--muted); font-weight: 600; flex: 0 0 auto; }
+    
+    .panel-close { display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid transparent; color: var(--muted); cursor: pointer; padding: 6px; border-radius: 50%; transition: all 0.2s; flex-shrink: 0; }
+    .panel-close:hover { background: rgba(255,255,255,0.1); color: var(--text); border-color: var(--border-hi); }
+
+    .panel__search-container { padding: 16px 20px 0; flex-shrink: 0; }
+    .search-wrapper { position: relative; display: flex; align-items: center; }
+    .panel-search { width: 100%; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); border-radius: 16px; padding: 12px 40px; color: var(--text); font-size: 13.5px; outline: none; transition: all 0.2s; font-family: inherit; }
+    .panel-search:focus { background: rgba(255, 255, 255, 0.08); border-color: var(--amber); box-shadow: 0 0 16px rgba(251, 191, 36, 0.2); }
+    .search-icon { position: absolute; left: 16px; width: 16px; height: 16px; stroke: var(--muted); pointer-events: none; }
+    .search-clear { position: absolute; right: 16px; display: none; align-items: center; justify-content: center; background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 50%; }
+    .search-clear:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+
+    .panel__body { flex: 1; overflow-y: auto; padding: 12px 20px 24px; scrollbar-width: thin; scrollbar-color: var(--dim) transparent; z-index: 10; }
+    .panel__body::-webkit-scrollbar { width: 5px; }
+    .panel__body::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 4px; }
+
+    .sec-head { display: flex; align-items: center; gap: 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); padding: 24px 6px 12px; }
+    .sec-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .sec-head:first-child { padding-top: 4px; }
+
+    .train-card {
+      background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-left: 4px solid var(--green);
+      border-radius: 16px; padding: 18px; margin-bottom: 12px; cursor: pointer; position: relative; overflow: hidden; transition: transform 0.18s, border-color 0.18s, background 0.18s, box-shadow 0.18s;
+    }
+    .train-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to right, var(--glow-color, rgba(16,185,129,0.1)) 0%, transparent 60%); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+    .train-card:hover { background: rgba(255,255,255,0.06); border-color: var(--border-hi); border-left-color: var(--card-color) !important; transform: translateX(6px); box-shadow: 0 12px 32px rgba(0,0,0,0.5); }
+    .train-card:hover::before { opacity: 1; }
+
+    .train-card--selected { border-color: var(--card-color) !important; background: rgba(255, 255, 255, 0.08) !important; box-shadow: 0 0 24px var(--glow-color), inset 0 0 16px rgba(255,255,255,0.05); border-width: 1.5px !important; }
+
+    .tc-row1 { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+    .tc-headcode { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; color: var(--card-color, var(--amber)); letter-spacing: 0.08em; line-height: 1; }
+    
+    .tc-block { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #000; background: var(--card-color); padding: 4px 10px; border-radius: 6px; box-shadow: 0 0 12px rgba(255,255,255,0.15); }
+    .tc-block.pulse { animation: block-pulse 1.8s ease-in-out infinite; }
+    @keyframes block-pulse { 0%, 100% { opacity: 1; filter: brightness(1); } 50% { opacity: 0.75; filter: brightness(1.2); } }
+
+    .tc-block.spad-active { background: rgba(239, 68, 68, 0.16) !important; color: #fecdd3 !important; box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.36), 0 0 12px rgba(239, 68, 68, 0.16); font-weight: 800; }
+
+    .tc-dest { display: flex; align-items: center; gap: 10px; font-size: 13.5px; font-weight: 500; color: var(--text); margin-bottom: 14px; }
+    .tc-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .tc-driver { font-size: 12px; font-weight: 500; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+
+    .person-row { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 12px; border: 1px solid transparent; cursor: pointer; transition: transform 0.18s, background 0.18s, border-color 0.18s; margin-bottom: 6px; }
+    .person-row:hover { background: rgba(255,255,255,0.04); border-color: var(--border); transform: translateX(6px); }
+    .person-row--selected { background: rgba(59, 130, 246, 0.15) !important; border-color: var(--blue) !important; box-shadow: 0 0 16px rgba(59, 130, 246, 0.25); }
+    .person-row__dot { width: 10px; height: 10px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 12px rgba(59,130,246,0.4); flex-shrink: 0; }
+    .person-row__name { font-size: 13.5px; font-weight: 500; color: var(--text); flex: 1; display: flex; justify-content: space-between; align-items: center; }
+
+    .empty { text-align: center; padding: 80px 20px; color: var(--dim); }
+    .empty__glyph { font-size: 48px; margin-bottom: 20px; display: block; filter: drop-shadow(0 8px 24px rgba(0,0,0,0.5)); }
+
+    /* ── Mobile Layout Optimization ─────────────────────────────────── */
+    @media (max-width: 768px) {
+      :root { --panel-w: 100vw; }
+      #header { padding: 0 20px; height: auto; padding-top: max(20px, env(safe-area-inset-top)); padding-bottom: 20px; flex-wrap: wrap; gap: 16px; }
+      .header__brand { width: 100%; justify-content: center; }
+      .header__controls { width: 100%; justify-content: space-between; }
+      .select-wrapper { flex: 1; margin-right: 12px; }
+      .server-select { width: 100%; }
+      
+      #desktop-toggle { display: none; }
+      #mobile-fab { display: flex; }
+
+      #player-card { left: 16px; right: 16px; width: auto; bottom: calc(max(24px, env(safe-area-inset-bottom)) + 64px); }
+      .leaflet-control-zoom { transition: margin-bottom 0.5s cubic-bezier(0.16, 1, 0.3, 1) !important; }
+      body.pc-card-active .leaflet-control-zoom { margin-bottom: calc(max(24px, env(safe-area-inset-bottom)) + 240px) !important; }
+
+      body:not(.panel-hidden) #player-card { transform: translateY(120%) !important; opacity: 0 !important; pointer-events: none !important; }
+      .leaflet-control-zoom { margin-bottom: 0 !important; margin-right: max(16px, env(safe-area-inset-right)) !important; }
+      .leaflet-bottom.leaflet-right { right: max(16px, env(safe-area-inset-right)) !important; bottom: max(16px, env(safe-area-inset-bottom)) !important; }
+      .leaflet-top.leaflet-right { margin-top: calc(max(20px, env(safe-area-inset-top)) + 92px) !important; }
+      
+      #panel { top: auto; left: 0; right: 0; bottom: 0; border-radius: 32px 32px 0 0; height: 75dvh; border: none; border-top: 1px solid var(--border-hi); transform: translateY(0); opacity: 1; pointer-events: auto; }
+      #panel::before { content: ''; position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 48px; height: 6px; border-radius: 12px; background: rgba(255,255,255,0.2); z-index: 10; }
+      body.panel-hidden #panel { transform: translateY(100%); opacity: 1; pointer-events: none; }
+    }
+  </style>
+</head>
+
+<body class="panel-hidden">
+
+  <div id="map"></div>
+
+  <!-- Header -->
+  <div id="header">
+    <div class="header__brand"><span class="header__logo">HonorWithin's Dovedale Livemap</span></div>
+    <div class="header__controls">
+      <div class="select-wrapper">
+        <select id="server-select" class="server-select"><option value="all">View All Servers</option></select>
+        <svg class="select-icon" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+      <div class="chip" id="ws-chip"><div class="chip__led" id="ws-led"></div><span class="hidden-mobile" id="ws-text">Connecting...</span></div>
+    </div>
+  </div>
+
+  <!-- Floating Toggles -->
+  <button id="desktop-toggle" aria-label="Toggle Panel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="14" y2="17"></line></svg>
+    <span class="desktop-toggle__label">Hide List</span>
+  </button>
+  
+  <button id="mobile-fab">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+    List View
+  </button>
+
+  <!-- Player Info Card (Comprehensive Real-time Telemetry Display) -->
+  <div id="player-card">
+    <div class="pc-header">
+      <div class="pc-title-group">
+        <div id="pc-title" class="pc-headcode">1P11</div>
+        <div id="pc-subtitle" class="pc-subtitle">Passenger Train</div>
+      </div>
+      <button class="pc-close" id="pc-close" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    
+    <div class="pc-meta">
+      <div class="pc-row-badge-container">
+        <span id="pc-status-badge" class="pc-status-badge">At Station</span>
+        <span id="pc-warning-banner" class="pc-warning-banner">⚠ POTENTIAL SPAD RISK (NO ROUTE)</span>
+      </div>
+      <div class="pc-row" id="pc-dest-row" style="display:none">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+        <span id="pc-dest">Destination</span>
+      </div>
+      <div class="pc-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        <span id="pc-driver">Driver Name</span>
+      </div>
+      <div class="pc-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 1 10 10c0 1-.2 2-.5 3"></path><path d="M12 2a10 10 0 0 0-10 10c0 1 .2 2 .5 3"></path><circle cx="12" cy="12" r="1"></circle><path d="m12 12 5-5"></path></svg>
+        <span id="pc-speed">Speed: Stationary</span>
+      </div>
+      <div class="pc-row">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+        <span id="pc-server">Server: Unknown</span>
+      </div>
+    </div>
+    
+    <div class="pc-actions">
+      <button class="pc-btn" id="pc-follow">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+        Follow
+      </button>
+    </div>
+  </div>
+
+  <!-- Sidebar Terminal -->
+  <aside id="panel">
+    <div class="panel__hdr">
+      <div class="panel__hdr-row">
+        <div class="panel__hdr-copy">
+          <div class="panel__hdr-kicker">Dovedale Railway</div>
+          <div class="panel__hdr-title">Live Map</div>
+        </div>
+        <button class="panel-close" id="panel-close" aria-label="Close List">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="panel__hdr-sub" id="panel-sub">Train and crew activity across Dovedale.</div>
+      
+      <div class="panel__toolbar">
+        <div class="changelog-container">
+          <button id="changelog-toggle" class="changelog-toggle">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            Patch Notes & Welcome
+          </button>
+          <div id="changelog-content" class="changelog-content">
+            <div class="changelog-content-wrapper">
+              <div class="changelog-content__inner">
+                <p><strong>👋 Hello! Welcome to my Dovedale Livemap.</strong></p>
+                <p>I built this to bring an alternative buttery-smooth livemap experience to the community. Performance has been deeply optimized to run flawlessly, even on low-end mobile devices. If you see me in-game, feel free to say hi!</p>
+                <ul style="padding-left: 16px; margin: 4px 0;">
+                  <li><strong>May 24, 2026:</strong> Added this changelog! Resolved teleportation overshoots, refined SPAD estimation, mitigated XSS vulnerabilities, and added pristine pixel-art rendering.</li>
+                </ul>
+                <p style="font-size: 10px; opacity: 0.6; margin-top: 2px;"><em>Note: This is a personal hobby project. Generative AI was used as a tool to help draft boilerplate faster, but all code has been fully human-audited, scrutinized, and rewritten to guarantee strict security and prevent memory leaks. More information can be found in the README.md file in the root directory of this source tree.</em></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel__stats">
+          <span class="panel-stat panel-stat--summary" id="panel-stat-summary">Loading...</span>
+          <span class="panel-stat panel-stat--dim" id="panel-stat-server">All servers</span>
+        </div>
+        <div class="panel__join-row" hidden>
+          <a class="join-link panel-join-link" id="join-link" href="roblox://experiences/start?placeId=12018816388" target="_self" rel="noreferrer" aria-label="Join Server">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 7.75v8.5c0 .95 1.03 1.55 1.86 1.08l7.5-4.25a1.25 1.25 0 0 0 0-2.16l-7.5-4.25A1.25 1.25 0 0 0 9 7.75Z"></path></svg>
+            Join server
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="panel__search-container">
+      <div class="search-wrapper">
+        <input type="text" id="panel-search" class="panel-search" placeholder="Search driver, headcode, station..." />
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <button id="search-clear" class="search-clear" aria-label="Clear Search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+    <div class="panel__body" id="panel-body">
+      <div class="empty">
+        <span class="empty__glyph">🚂</span>
+        <div class="empty__text">Waiting for map data...</div>
+      </div>
+    </div>
+  </aside>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script>
+    'use strict'
+
+    const WS_URL = 'wss://map.dovedale.wiki/api/ws';
+    const WORLD_BOUNDS = { TOP_LEFT: { x: -23818, y: -10426 }, BOTTOM_RIGHT: { x: 20504, y: 11377 } };
+    
+    const AREA_MARKERS = {
+      "Gleethrop End": { x: 1274, y: 3563 }, "Groenewoud": { x: -14658, y: -3762 }, "Dovedale East": { x: 1231, y: 534 },
+      "Fanory Mill": { x: -16821, y: -3954 }, "Mazewood": { x: -4650, y: 5798 }, "Conby": { x: -11688, y: -3270 },
+      "Codsall Castle": { x: 9991, y: 5236 }, "Masonfield": { x: 10667, y: -881 }, "Benyhone Loop": { x: -19532, y: -5201 },
+      "Perthtyne": { x: -490, y: 5268 }, "Ashburn": { x: -22012, y: -6729 }, "Cosdale Harbour": { x: 4325, y: -2518 },
+      "Glassbury Junction": { x: 11592, y: 8663 }, "Dovedale Central": { x: 3157, y: 805 }, "Wington Mount": { x: 2922, y: -2830 },
+      "Marigot Crossing": { x: 7692, y: 2205 }, "Satus": { x: -7485, y: -3055 }
+    };
+
+    let currentServerId = 'all';
+    let selectedUsername = null;
+    let isFollowing = false;
+
+    const isMobileLike = () => window.innerWidth <= 768;
+
+    /* ── High-Performance DOM Helper Utilities ── */
+    function setDOMText(id, text) {
+      const el = document.getElementById(id);
+      if (el && el.textContent !== text) el.textContent = text;
+    }
+    function setDOMDisplay(id, display) {
+      const el = document.getElementById(id);
+      if (el && el.style.display !== display) el.style.display = display;
+    }
+
+    /* ── Dynamic Railway Color Class System ────────────────── */
+    const RAIL_COLORS = ["#ef4444", "#3b82f6", "#10b981", "#a855f7", "#f59e0b", "#06b6d4", "#ec4899"];
+    
+    function hashStringToColor(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return RAIL_COLORS[Math.abs(hash) % RAIL_COLORS.length];
+    }
+
+    function normalizeTrainData(trainData) {
+      if (!trainData) return null;
+      if (typeof trainData === 'object' && !Array.isArray(trainData)) {
+        return {
+          destination: trainData.destination || trainData.Destination || '',
+          trainClass: trainData.trainClass || trainData.class || trainData.Class || '',
+          headcode: trainData.headcode || trainData.Headcode || ''
+        };
+      }
+      if (Array.isArray(trainData)) {
+        return {
+          destination: trainData[0] || '',
+          trainClass: trainData[1] || '',
+          headcode: trainData[2] || ''
+        };
+      }
+      return null;
+    }
+
+    function getPlayerSignature(player) {
+      const px = Number(player?.position?.x) || 0;
+      const py = Number(player?.position?.y || player?.position?.z) || 0;
+      const td = player?.trainData || {};
+      return [ px, py, td.headcode || '', td.destination || '', td.trainClass || '' ].join('|');
+    }
+
+    const MOTION_BUFFER_MS = 250;
+    const MOTION_MAX_EXTRAPOLATION_MS = 900;
+    const MOTION_SAMPLE_LIMIT = 4;
+    const MOTION_EPSILON = 0.02;
+
+    function pushMotionSample(motion, x, y, time) {
+      if (!motion.samples) motion.samples = [];
+      const last = motion.samples[motion.samples.length - 1];
+
+      if (last) {
+        const distanceMoved = Math.hypot(x - last.x, y - last.y);
+        if (distanceMoved > 2000) {
+          motion.samples = []; 
+        }
+      }
+
+      const lastCleared = motion.samples[motion.samples.length - 1];
+      if (lastCleared && lastCleared.x === x && lastCleared.y === y && time - lastCleared.time < 35) {
+        lastCleared.time = time;
+      } else {
+        motion.samples.push({ time, x, y });
+        while (motion.samples.length > MOTION_SAMPLE_LIMIT) motion.samples.shift();
+      }
+
+      motion.lastUpdate = time;
+    }
+
+    function resolveMotionState(entry, now = performance.now()) {
+      const fallbackX = Number(entry.data?.position?.x) || 0;
+      const fallbackY = Number(entry.data?.position?.y || entry.data?.position?.z) || 0;
+      const samples = entry.motion?.samples || [];
+
+      if (!samples.length) {
+        const angle = entry.renderAngle ?? entry.angle ?? 0;
+        return {
+          x: fallbackX,
+          y: fallbackY,
+          dx: entry.dx || 0,
+          dy: entry.dy || 0,
+          angle,
+          latlng: L.latLng(-fallbackY, fallbackX),
+          moving: false,
+          extrapolating: false,
+        };
+      }
+
+      const targetTime = now - MOTION_BUFFER_MS;
+      const first = samples[0];
+      const last = samples[samples.length - 1];
+
+      let prev = first;
+      let next = first;
+      let extrapolating = false;
+
+      if (samples.length === 1 || targetTime <= first.time) {
+        prev = first;
+        next = first;
+      } else if (targetTime >= last.time) {
+        prev = samples[samples.length - 2] || last;
+        next = last;
+        extrapolating = true;
+      } else {
+        for (let index = 0; index < samples.length - 1; index++) {
+          const current = samples[index];
+          const following = samples[index + 1];
+          if (targetTime >= current.time && targetTime <= following.time) {
+            prev = current;
+            next = following;
+            break;
+          }
+        }
+      }
+
+      const span = Math.max(16, next.time - prev.time);
+      const vx = ((next.x - prev.x) / span) * 1000;
+      const vy = ((next.y - prev.y) / span) * 1000;
+
+      let x;
+      let y;
+
+      if (extrapolating) {
+        const extraMs = Math.min(Math.max(0, targetTime - last.time), MOTION_MAX_EXTRAPOLATION_MS);
+        x = last.x + (vx * extraMs) / 1000;
+        y = last.y + (vy * extraMs) / 1000;
+      } else if (samples.length === 1 || targetTime <= first.time) {
+        x = first.x;
+        y = first.y;
+      } else {
+        const progress = Math.min(1, Math.max(0, (targetTime - prev.time) / span));
+        x = prev.x + (next.x - prev.x) * progress;
+        y = prev.y + (next.y - prev.y) * progress;
+      }
+
+      const speed = Math.hypot(vx, vy);
+      const angle = speed > 1.0 ? Math.atan2(vy, vx) : (entry.renderAngle ?? entry.angle ?? 0);
+
+      return {
+        x,
+        y,
+        dx: vx,
+        dy: vy,
+        angle,
+        latlng: L.latLng(-y, x),
+        moving: speed > MOTION_EPSILON,
+        extrapolating,
+      };
+    }
+
+    function hasNoActiveRoute(player) {
+      if (!player || !player.trainData) return false;
+      const td = player.trainData;
+      const hasNoHeadcode = !td.headcode || td.headcode.trim() === "" || td.headcode === "----" || td.headcode.toLowerCase() === "unknown";
+      const hasNoDest = !td.destination || td.destination.trim() === "" || td.destination.toLowerCase() === "unselected" || td.destination.toLowerCase() === "not set" || td.destination.toLowerCase() === "unknown";
+      return hasNoHeadcode || hasNoDest;
+    }
+
+    function isSpadRisk(player) {
+      if (!player || !player.trainData) return false;
+      const speed = player.speed || 0;
+      if (speed < 1.5) return false;
+      return hasNoActiveRoute(player);
+    }
+
+    function getTrainColor(headcode, player) {
+      if (player && hasNoActiveRoute(player)) return '#ef4444'; 
+      if (!headcode) return '#10b981'; 
+      const cls = headcode.trim().charAt(0);
+      switch (cls) {
+        case '1': return '#a855f7'; 
+        case '2': return '#10b981'; 
+        case '3': return '#3b82f6'; 
+        case '5': return '#ec4899'; 
+        case '0': return '#f59e0b'; 
+        default:  return hashStringToColor(headcode); 
+      }
+    }
+
+    /* ── Leaflet Initialization ──────────────────────────────── */
+    const L_NORTH = -WORLD_BOUNDS.TOP_LEFT.y;
+    const L_SOUTH = -WORLD_BOUNDS.BOTTOM_RIGHT.y;
+    const L_WEST  = WORLD_BOUNDS.TOP_LEFT.x;
+    const L_EAST  = WORLD_BOUNDS.BOTTOM_RIGHT.x;
+
+    const mapBounds = [ [L_SOUTH, L_WEST], [L_NORTH, L_EAST] ];
+    
+    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -8, maxZoom: 3, zoomSnap: 0.1, zoomDelta: 0.5, wheelPxPerZoomLevel: 100 });
+    
+    function syncZoomControlPosition() {
+      map.zoomControl.setPosition(isMobileLike() ? 'topright' : 'bottomright');
+    }
+    syncZoomControlPosition();
+
+    const COLUMNS = 16;
+    const chunkWidth = (L_EAST - L_WEST) / COLUMNS;
+    const CACHE_BUST = '2026-05-23-1';
+    for (let c = 0; c < COLUMNS; c++) {
+      const west = L_WEST + (c * chunkWidth);
+      const east = west + chunkWidth + 15.0; 
+      const bounds = [[L_SOUTH, west], [L_NORTH, east]];
+      L.imageOverlay(`https://map.dovedale.wiki/images/row-1-column-${c + 1}.png?v=${CACHE_BUST}`, bounds).addTo(map);
+    }
+    map.fitBounds(mapBounds);
+
+    for (const [name, pos] of Object.entries(AREA_MARKERS)) {
+      const icon = L.divIcon({ className: 'custom-marker', html: `<div class="area-label">${name}</div>`, iconSize: [0, 0] });
+      L.marker([-pos.y, pos.x], { icon, interactive: false, zIndexOffset: 2000 }).addTo(map);
+    }
+
+    map.on('dragstart', () => { document.body.classList.add('map-moving'); if (isFollowing) toggleFollow(false); });
+    map.on('zoomstart', () => document.body.classList.add('map-moving'));
+    map.on('moveend zoomend dragend', () => setTimeout(() => document.body.classList.remove('map-moving'), 50));
+    map.on('click', () => selectPlayer(null));
+
+    function updateIconScale() {
+      const zoom = map.getZoom();
+      const isCompactViewport = window.matchMedia('(max-width: 768px)').matches || window.matchMedia('(pointer: coarse)').matches;
+      const minScale = isCompactViewport ? 0.72 : 0.8;
+      const maxScale = isCompactViewport ? 1.65 : 1.5;
+      const zoomBias = isCompactViewport ? 1.08 + (zoom * 0.18) : 1.08 + (zoom * 0.1);
+      let scale = Math.max(minScale, Math.min(zoomBias, maxScale));
+      document.documentElement.style.setProperty('--icon-scale', scale.toFixed(2));
+      
+      const destThreshold = isCompactViewport ? -4.2 : -3.5;
+      const labelThreshold = isCompactViewport ? -6.8 : -6.2;
+
+      if (zoom >= destThreshold) {
+        document.documentElement.style.setProperty('--ticker-animation', 'marker-ticker 6.5s cubic-bezier(0.76, 0, 0.24, 1) infinite');
+        document.documentElement.style.setProperty('--ticker-y', '-16px');
+      } else {
+        document.documentElement.style.setProperty('--ticker-animation', 'none');
+        document.documentElement.style.setProperty('--ticker-y', '0px');
+      }
+      
+      const personLabelThreshold = isCompactViewport ? -2.2 : -1.8;
+      document.documentElement.style.setProperty('--show-label', zoom >= labelThreshold ? 'flex' : 'none');
+      document.documentElement.style.setProperty('--show-person-label', zoom >= personLabelThreshold ? 'flex' : 'none');
+
+      if (zoom >= -2.0) {
+        document.documentElement.style.setProperty('--show-stations', 'none');
+      } else {
+        document.documentElement.style.setProperty('--show-stations', 'block');
+      }
+    }
+    let viewportSyncFrame = null;
+    function syncViewportLayout() {
+      syncZoomControlPosition();
+      updateIconScale();
+      if (viewportSyncFrame) cancelAnimationFrame(viewportSyncFrame);
+      viewportSyncFrame = requestAnimationFrame(() => {
+        map.invalidateSize({ animate: false, pan: false });
+      });
+    }
+    map.on('zoom', updateIconScale); updateIconScale();
+    window.addEventListener('resize', syncViewportLayout, { passive: true });
+    syncViewportLayout();
+
+    /* ── State & SVGs ────────────────────────────────────────── */
+    const servers = new Map();
+    const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    
+    const svgPerson = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+    
+    const svgTrainCar = (color) => `
+    <svg viewBox="0 0 32 14" width="32" height="14" style="display: block;">
+      <path d="M2,1 L22,1 C25,1 29,3.5 31.5,7 C29,10.5 25,13 22,13 L2,13 C0.8,13 0,12.2 0,11 L0,3 C0,1.8 0.8,1 2,1 Z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
+      <path d="M16,3 L22,3 C23.5,3 24.5,4.5 25,7 C24.5,9.5 23.5,11 22,11 L16,11 Z" fill="rgba(0,0,0,0.4)"/>
+      <circle cx="29.5" cy="7" r="1.5" fill="#fff" style="filter: drop-shadow(0 0 4px #fff)"/>
+    </svg>`;
+
+    function triggerRipple(latlng, color, isAlert = false) {
+      if (!latlng || isNaN(latlng.lat) || isNaN(latlng.lng)) return;
+      
+      const circle = L.circle(latlng, {
+        radius: 100, color: color, weight: isAlert ? 4 : 2,
+        fillColor: 'transparent', fillOpacity: 0, className: 'ripple-wave'
+      }).addTo(map);
+
+      const maxRadius = isAlert ? 4000 : 2500;
+      const duration = isAlert ? 2000 : 1200;
+      const start = Date.now(); 
+
+      function animate() {
+        if (!map.hasLayer(circle)) return;
+        const elapsed = Date.now() - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = progress * (2 - progress); 
+        
+        circle.setRadius(100 + ease * (maxRadius - 100));
+        
+        const opacityMultiplier = isAlert ? 0.35 : 0.15;
+        circle.setStyle({ 
+          opacity: (1 - progress) * opacityMultiplier, 
+          weight: (isAlert ? 4 : 2) * (1 - progress) 
+        });
+
+        if (progress < 1) requestAnimationFrame(animate);
+        else if (map.hasLayer(circle)) map.removeLayer(circle);
+      }
+      requestAnimationFrame(animate);
+    }
+
+    /* ── Selection & Follow UX ───────────────────────────────── */
+    function selectPlayer(username) {
+      if (selectedUsername === username) return;
+      selectedUsername = username;
+      isFollowing = false;
+      document.getElementById('pc-follow').classList.remove('following');
+
+      let found = null;
+      let foundJobId = null;
+      for (const [jobId, srvMap] of servers.entries()) {
+        for (const [uname, entry] of srvMap.entries()) {
+          const isSelected = (uname === selectedUsername);
+          if (isSelected) { found = entry; foundJobId = jobId; }
+          if (entry.isSelected !== isSelected) {
+            entry.isSelected = isSelected;
+            
+            const el = entry.marker.getElement();
+            if (el) {
+              const mkEl = el.querySelector('.mk');
+              if (mkEl) {
+                mkEl.classList.toggle('mk--selected', isSelected);
+                const themeColor = entry.data.trainData ? getTrainColor(entry.data.trainData.headcode, entry.data) : 'var(--blue)';
+                mkEl.style.setProperty('--sel-color', themeColor);
+              }
+            } else {
+              entry.marker.setIcon(buildIcon(entry.data, entry.angle, isSelected));
+            }
+            entry.marker.setZIndexOffset(isSelected ? 1000 : (entry.data.trainData ? 100 : 0));
+          }
+        }
+      }
+
+      schedPaint();
+
+      const card = document.getElementById('player-card');
+      if (found) {
+        const sector = getSectorData(found.data, found.dx || 0, found.dy || 0);
+        const spad = isSpadRisk(found.data);
+        const themeColor = getTrainColor(found.data.trainData?.headcode, found.data);
+
+        document.documentElement.style.setProperty('--pc-accent', themeColor);
+        triggerRipple(found.marker.getLatLng(), themeColor, false);
+
+        if (found.data.trainData) {
+          const rawHeadcode = found.data.trainData.headcode;
+          const displayHeadcode = (!rawHeadcode || rawHeadcode === "" || rawHeadcode === "----" || rawHeadcode.toLowerCase() === "unknown") ? "UNROUTED" : rawHeadcode;
+          setDOMText('pc-title', displayHeadcode);
+          
+          const titleEl = document.getElementById('pc-title');
+          if (titleEl.style.color !== themeColor) titleEl.style.color = themeColor;
+          
+          setDOMText('pc-subtitle', found.data.trainData.trainClass || 'Train');
+          setDOMText('pc-dest', `Bound for ${found.data.trainData.destination || 'Not Set'}`);
+          setDOMDisplay('pc-dest-row', 'flex');
+        } else {
+          setDOMText('pc-title', found.data.username);
+          const titleEl = document.getElementById('pc-title');
+          if (titleEl.style.color !== 'var(--blue)') titleEl.style.color = 'var(--blue)';
+          
+          setDOMText('pc-subtitle', 'On Foot');
+          setDOMDisplay('pc-dest-row', 'none');
+        }
+
+        setDOMText('pc-driver', `Operator: ${found.data.username}`);
+        setDOMText('pc-server', `Server: ${foundJobId.substring(0,8)}`);
+        
+        const speed = found.data.speed || 0;
+        setDOMText('pc-speed', speed < 1.5 ? 'Speed: Stationary' : `Speed: ${Math.round(speed)} studs/s`);
+
+        const badgeEl = document.getElementById('pc-status-badge');
+        setDOMText('pc-status-badge', sector.status);
+        if (badgeEl.style.background !== themeColor) badgeEl.style.background = themeColor;
+        badgeEl.style.boxShadow = `0 0 16px ${themeColor}40`;
+
+        const bannerEl = document.getElementById('pc-warning-banner');
+        if (spad) {
+          setDOMDisplay('pc-warning-banner', 'block');
+          setDOMText('pc-warning-banner', '⚠ POTENTIAL SPAD RISK (NO ROUTE)');
+        } else {
+          setDOMDisplay('pc-warning-banner', 'none');
+        }
+
+        card.classList.add('active');
+        document.body.classList.add('pc-card-active');
+        
+        if (!isFollowing) toggleFollow(true);
+      } else {
+        card.classList.remove('active');
+        document.body.classList.remove('pc-card-active');
+      }
+    }
+
+    function toggleFollow(forceState) {
+      isFollowing = forceState !== undefined ? forceState : !isFollowing;
+      const btn = document.getElementById('pc-follow');
+      if (isFollowing) {
+        btn.classList.add('following');
+        for (const srvMap of servers.values()) {
+          if (srvMap.has(selectedUsername)) {
+            const entry = srvMap.get(selectedUsername);
+            map.panTo(entry.marker.getLatLng(), { animate: true, duration: 0.8 });
+            break;
+          }
+        }
+      } else {
+        btn.classList.remove('following');
+      }
+    }
+
+    function updateLivePlayerCard(player, dx, dy, jobId) {
+      const card = document.getElementById('player-card');
+      if (!card.classList.contains('active')) return;
+      
+      const sector = getSectorData(player, dx, dy);
+      const themeColor = getTrainColor(player.trainData?.headcode, player);
+      const spad = isSpadRisk(player);
+      
+      const speed = player.speed || 0;
+      setDOMText('pc-speed', speed < 1.5 ? 'Speed: Stationary' : `Speed: ${Math.round(speed)} studs/s`);
+      
+      const badgeEl = document.getElementById('pc-status-badge');
+      if (badgeEl.textContent !== sector.status) {
+        badgeEl.textContent = sector.status;
+        badgeEl.style.background = themeColor;
+        badgeEl.style.boxShadow = `0 0 16px ${themeColor}40`;
+      }
+
+      const bannerEl = document.getElementById('pc-warning-banner');
+      const bannerDisplay = spad ? 'block' : 'none';
+      if (bannerEl.style.display !== bannerDisplay) {
+        bannerEl.style.display = bannerDisplay;
+        if (spad) bannerEl.textContent = '⚠ POTENTIAL SPAD RISK (NO ROUTE)';
+      }
+      
+      if (player.trainData) {
+        setDOMText('pc-dest', `Bound for ${player.trainData.destination || 'Not Set'}`);
+      }
+    }
+
+    function renderMotionFrame(now = performance.now()) {
+      let selectedRender = null;
+      const bounds = map.getBounds(); 
+      const paddedBounds = bounds.pad(0.1); 
+
+      for (const [jobId, srv] of servers.entries()) {
+        const isVisible = currentServerId === 'all' || currentServerId === jobId;
+        if (!isVisible) continue;
+
+        for (const entry of srv.values()) {
+          const motion = resolveMotionState(entry, now);
+          entry.renderAngle = motion.angle;
+          entry.renderLatLng = motion.latlng;
+
+          if (entry.marker) {
+            const isInside = paddedBounds.contains(motion.latlng); 
+            
+            if (isInside) {
+              if (!map.hasLayer(entry.marker)) {
+                entry.marker.addTo(map); 
+              }
+              
+              const markerEl = entry.marker.getElement();
+              if (markerEl) {
+                const trainGraphic = markerEl.querySelector('.mk__graphic-train');
+                if (trainGraphic) trainGraphic.style.setProperty('--angle', `${motion.angle}rad`);
+              }
+
+              const currentLatLng = entry.marker.getLatLng();
+              if (!currentLatLng || Math.abs(currentLatLng.lat - motion.latlng.lat) > MOTION_EPSILON || Math.abs(currentLatLng.lng - motion.latlng.lng) > MOTION_EPSILON) {
+                entry.marker.setLatLng(motion.latlng);
+              }
+            } else {
+              if (map.hasLayer(entry.marker) && !entry.isSelected) {
+                map.removeLayer(entry.marker); 
+              }
+            }
+          }
+
+          if (entry.isSelected && entry.data.username === selectedUsername) {
+            selectedRender = {
+              player: { ...entry.data, speed: Math.hypot(motion.dx, motion.dy), position: { x: motion.x, y: motion.y } },
+              dx: motion.dx,
+              dy: motion.dy,
+              jobId,
+            };
+          }
+        }
+      }
+
+      if (selectedRender) {
+        updateLivePlayerCard(selectedRender.player, selectedRender.dx, selectedRender.dy, selectedRender.jobId);
+      }
+
+      requestAnimationFrame(renderMotionFrame);
+    }
+    requestAnimationFrame(renderMotionFrame);
+
+    document.getElementById('pc-close').addEventListener('click', () => selectPlayer(null));
+    document.getElementById('pc-follow').addEventListener('click', () => toggleFollow());
+
+    /* ── Marker Building ─────────────────────────────────────── */
+    function buildIcon (player, angle, isSelected) {
+      const train = !!player.trainData;
+      const spad = train ? isSpadRisk(player) : false;
+      const themeColor = train ? getTrainColor(player.trainData.headcode, player) : 'var(--blue)';
+      const graphic = train 
+        ? `<div class="mk__graphic-train" style="--angle: ${angle}rad; filter: drop-shadow(0 0 12px ${themeColor})">${svgTrainCar(themeColor)}</div>`
+        : `<div class="mk__graphic-person" style="--color: ${themeColor}"></div>`;
+
+      const selClass = isSelected ? ' mk--selected' : '';
+      
+      const rawHeadcode = player.trainData?.headcode?.trim();
+      const hasNoHeadcode = !rawHeadcode || rawHeadcode === "" || rawHeadcode === "----" || rawHeadcode.toLowerCase() === "unknown";
+      
+      let label;
+      if (train) {
+        if (hasNoHeadcode) {
+          label = "⚠ UNROUTED";
+        } else {
+          label = spad ? `⚠ ${rawHeadcode}` : rawHeadcode;
+        }
+      } else {
+        label = player.username || 'Unknown Operator';
+      }
+      
+      const labelEl = train
+        ? `<div class="mk__label">
+             <div class="mk__label-ticker">
+               <div class="mk__ticker-inner">
+                 <div class="mk__ticker-item mk__code" style="color: ${themeColor}">${esc(label)}</div>
+                 <div class="mk__ticker-item mk__dest">➔ ${esc(player.trainData.destination || 'Not Set')}</div>
+               </div>
+             </div>
+           </div>`
+        : `<div class="mk__label"><div class="mk__name">${esc(label)}</div></div>`;
+
+      return L.divIcon({
+        className: 'custom-marker',
+        html: `<div class="mk mk--${train?'train':'person'}${selClass}" style="--sel-color: ${themeColor}; --color: ${themeColor}">${graphic}${labelEl}</div>`,
+        iconSize: train ? [72, 32] : [80, 24],
+        iconAnchor: train ? [36, 16] : [40, 6]
+      });
+    }
+
+    function updateMapVisibility() {
+      const bounds = map.getBounds().pad(0.1);
+      for (const [jobId, srvMap] of servers.entries()) {
+        const isVisible = (currentServerId === 'all' || currentServerId === jobId);
+        for (const player of srvMap.values()) {
+          const onScreen = bounds.contains(player.renderLatLng || player.marker.getLatLng());
+          if (isVisible && onScreen && !map.hasLayer(player.marker)) {
+            player.marker.addTo(map);
+          } else if ((!isVisible || !onScreen) && map.hasLayer(player.marker) && !player.isSelected) {
+            map.removeLayer(player.marker);
+          }
+        }
+      }
+    }
+
+    function updateDropdown() {
+      const select = document.getElementById('server-select');
+      if (document.activeElement === select) return;
+
+      const currentHash = Array.from(servers.keys()).sort().join(',');
+      if (select.dataset.hash === currentHash) {
+        for (const [jobId, srvMap] of servers.entries()) {
+          const opt = Array.from(select.options).find(o => o.value === jobId);
+          if (opt) opt.textContent = `Server ${jobId.substring(0,6)} (${srvMap.size} players)`;
+        }
+        return;
+      }
+      select.dataset.hash = currentHash;
+
+      let html = `<option value="all">View All Servers</option>`;
+      for (const [jobId, srvMap] of servers.entries()) {
+        const selected = (jobId === currentServerId) ? 'selected' : '';
+        const safeJobId = esc(jobId);
+        html += `<option value="${safeJobId}" ${selected}>Server ${safeJobId.substring(0,6)} (${srvMap.size} players)</option>`;
+      }
+      select.innerHTML = html;
+      
+      if (!servers.has(currentServerId) && currentServerId !== 'all') {
+        currentServerId = 'all'; select.value = 'all';
+        updateMapVisibility(); schedPaint();
+      }
+      syncPanelJoinVisibility();
+    }
+
+    function syncPanelJoinVisibility() {
+      const joinRow = document.querySelector('.panel__join-row');
+      const joinLink = document.getElementById('join-link');
+      if (joinRow) {
+        const isAll = currentServerId === 'all';
+        joinRow.hidden = isAll;
+        if (joinLink) {
+          if (isAll) {
+            joinLink.href = 'roblox://experiences/start?placeId=12018816388';
+          } else {
+            joinLink.href = 'roblox://experiences/start?placeId=12018816388&gameInstanceId=' + encodeURIComponent(currentServerId);
+          }
+        }
+      }
+    }
+
+    function upsert (jobId, player) {
+      if (!servers.has(jobId)) servers.set(jobId, new Map());
+      const srv = servers.get(jobId);
+      
+      const px = Number(player.position.x) || 0;
+      const py = Number(player.position.y || player.position.z) || 0;
+      const latlng = L.latLng(-py, px);
+      const now = performance.now();
+      const wallNow = Date.now();
+      
+      player.trainData = normalizeTrainData(player.trainData);
+      const isSelected = (player.username === selectedUsername);
+      const signature = getPlayerSignature(player);
+
+      if (srv.has(player.username)) {
+        const entry = srv.get(player.username);
+        if (!entry.motion) entry.motion = { samples: [] };
+        pushMotionSample(entry.motion, px, py, now);
+
+        let dx = px - entry.data.position.x;
+        let dy = py - entry.data.position.y;
+        
+        const distanceMoved = Math.hypot(dx, dy);
+        let speed = 0;
+        if (distanceMoved < 2000) {
+          const dt = Math.max(0.1, (now - entry.motion.lastUpdate) / 1000);
+          speed = distanceMoved / dt;
+        } else {
+          dx = 0;
+          dy = 0;
+        }
+        player.speed = speed;
+
+        const sector = getSectorData(player, dx, dy);
+
+        if (entry.lastStatus !== sector.status) {
+          if (sector.spad && sector.status.startsWith("SPAD")) {
+            triggerRipple(latlng, '#ef4444', true);
+          }
+        }
+        
+        if (entry.data.trainData?.headcode !== player.trainData?.headcode || !!entry.data.trainData !== !!player.trainData || entry.isSelected !== isSelected) {
+          entry.marker.setIcon(buildIcon(player, entry.renderAngle ?? 0, isSelected));
+        }
+
+        entry.dx = dx;
+        entry.dy = dy;
+        entry.data = player;
+        entry.signature = signature;
+        entry.isSelected = isSelected;
+        entry.lastSeen = wallNow;
+        entry.lastStatus = sector.status;
+
+        if (isSelected) {
+          if (isFollowing) map.panTo(latlng, { animate: true, duration: 0.8 });
+        }
+
+        return true;
+      } else {
+        player.speed = 0;
+        const marker = L.marker(latlng, { icon: buildIcon(player, 0, isSelected), zIndexOffset: isSelected ? 1000 : (player.trainData ? 100 : 0) });
+        marker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          selectPlayer(player.username);
+        });
+
+        const bounds = map.getBounds().pad(0.1);
+        if ((currentServerId === 'all' || currentServerId === jobId) && bounds.contains(latlng)) {
+          marker.addTo(map);
+        }
+        const sector = getSectorData(player, 0, 0);
+        srv.set(player.username, {
+          marker,
+          data: player,
+          angle: 0,
+          renderAngle: 0,
+          dx: 0,
+          dy: 0,
+          isSelected,
+          signature,
+          motion: { samples: [{ time: now, x: px, y: py }], lastUpdate: now },
+          lastStatus: sector.status,
+          lastSeen: wallNow,
+        });
+        return true;
+      }
+    }
+
+    function purgeStale () {
+      const cutoff = Date.now() - 30000;
+      let uiNeedsUpdate = false;
+      for (const [jobId, srv] of servers) {
+        if (srv.lastUpdate && srv.lastUpdate < cutoff) {
+          for (const entry of srv.values()) {
+            if (map.hasLayer(entry.marker)) map.removeLayer(entry.marker);
+            if (entry.data.username === selectedUsername) selectPlayer(null);
+          }
+          servers.delete(jobId);
+          uiNeedsUpdate = true;
+        }
+      }
+      if (uiNeedsUpdate) updateDropdown();
+    }
+
+    /* ── Advanced Signaling Block Analytics (Vector Dot Product) ───── */
+    function getSectorData(player, dx, dy) {
+      let minDistance = Infinity;
+      let nearestName = "Unknown";
+      
+      const px = Number(player.position.x) || 0;
+      const py = Number(player.position.y || player.position.z) || 0;
+
+      for (const [name, pos] of Object.entries(AREA_MARKERS)) {
+        const dist = Math.hypot(px - pos.x, py - pos.y);
+        if (dist < minDistance) { minDistance = dist; nearestName = name; }
+      }
+      
+      const isTrain = !!player.trainData;
+      if (!isTrain) {
+        const status = minDistance < 1500 ? `At ${nearestName}` : `Near ${nearestName}`;
+        return { station: nearestName, status };
+      }
+      
+      const speed = player.speed !== undefined ? player.speed : Math.hypot(dx, dy);
+      const spad = isSpadRisk(player);
+      let status = "";
+      
+      if (spad) {
+        status = `SPAD Risk @ ${nearestName}`;
+        return { station: nearestName, status, spad };
+      }
+      
+      const hasNoRoute = !player.trainData.headcode || player.trainData.headcode === "----" || !player.trainData.destination || player.trainData.destination.toLowerCase() === "unselected";
+      
+      if (speed < 1.5) {
+        if (hasNoRoute) {
+          status = minDistance < 1200 ? `No Route @ ${nearestName}` : "No Route (Siding)";
+        } else {
+          status = minDistance < 1200 ? `At ${nearestName}` : `Near ${nearestName}`;
+        }
+      } else {
+        const stationPos = AREA_MARKERS[nearestName];
+        const sx = stationPos.x - px;
+        const sy = stationPos.y - py;
+        const dotProduct = sx * dx + sy * dy;
+        
+        if (minDistance < 1500) {
+          status = dotProduct > 0 ? `Arriving at ${nearestName}` : `Departing ${nearestName}`;
+        } else {
+          status = dotProduct > 0 ? `En Route near ${nearestName}` : `Leaving ${nearestName} area`;
+        }
+      }
+      
+      return { station: nearestName, status, spad: false };
+    }
+
+    /* ── Sidebar Renderer ────────────────────────────────────── */
+    let paintQueued = false;
+    const schedPaint = () => { if (!paintQueued) { paintQueued = true; requestAnimationFrame(paint); } };
+
+    function paint () {
+      paintQueued = false;
+      const body = document.getElementById('panel-body');
+      
+      setDOMText('panel-sub', currentServerId === 'all' 
+        ? 'Real-time trains and crew across every server.' 
+        : `Viewing active movements in Server ${currentServerId.substring(0,6)}.`);
+
+      const trains = [], persons = [];
+      const mapCenter = map.getCenter();
+      const mapSize = map.getSize();
+      const query = document.getElementById('panel-search')?.value.toLowerCase().trim() || '';
+
+      for (const [jobId, srv] of servers) {
+        if (currentServerId !== 'all' && currentServerId !== jobId) continue;
+        for (const [, entry] of srv) {
+          const motion = resolveMotionState(entry, performance.now());
+          const rec = { ...entry.data, speed: Math.hypot(motion.dx, motion.dy), position: { x: motion.x, y: motion.y }, jobId, shortId: jobId.slice(0, 6) };
+          const sector = getSectorData(rec, motion.dx || 0, motion.dy || 0);
+          const latlng = L.latLng(-motion.y, motion.x);
+          const point = map.latLngToContainerPoint(latlng);
+          const centerPoint = map.latLngToContainerPoint(mapCenter);
+          const inView = (
+            point.x >= 0 && point.x <= mapSize.x &&
+            point.y >= 0 && point.y <= mapSize.y
+          ) ? 0 : 1;
+          const distance = Math.hypot(point.x - centerPoint.x, point.y - centerPoint.y);
+          
+          const matchesSearch = !query || 
+            rec.username.toLowerCase().includes(query) || 
+            (rec.trainData && (
+              rec.trainData.headcode.toLowerCase().includes(query) ||
+              rec.trainData.trainClass.toLowerCase().includes(query) ||
+              rec.trainData.destination.toLowerCase().includes(query)
+            )) ||
+            sector.station.toLowerCase().includes(query);
+
+          if (!matchesSearch) continue;
+
+          entry.data.trainData ? trains.push({rec, sector, entry, inView, distance}) : persons.push({rec, sector, entry, inView, distance});
+        }
+      }
+
+      trains.sort((a, b) => a.inView - b.inView || a.distance - b.distance || (a.rec.trainData?.headcode||'').localeCompare(b.rec.trainData?.headcode||''));
+      persons.sort((a, b) => a.inView - b.inView || a.distance - b.distance || a.rec.username.localeCompare(b.rec.username));
+
+      setDOMText('panel-stat-summary', `${trains.length} Trains · ${persons.length} On Foot`);
+      setDOMText('panel-stat-server', currentServerId === 'all' ? 'All servers' : `Server ${currentServerId.substring(0,6)}`);
+      
+      const spadNote = document.getElementById('panel-spad-note');
+      if (spadNote) spadNote.classList.toggle('active', trains.some((t) => t.sector.spad));
+
+      const stateHash = JSON.stringify(trains.map(t=>t.rec.username+(t.rec.trainData?.headcode || '')+t.sector.status+(t.entry.isSelected?'1':'0'))) + JSON.stringify(persons.map(p=>p.rec.username+p.sector.status+(p.entry.isSelected?'1':'0')));
+      if (body.dataset.hash === stateHash) return;
+      body.dataset.hash = stateHash;
+
+      if (!trains.length && !persons.length) {
+        body.innerHTML = `<div class="empty"><span class="empty__glyph">🚂</span><div class="empty__text">No players found matching search.</div></div>`;
+        return;
+      }
+
+      let html = '';
+      
+      if (trains.length) {
+        html += `<div class="sec-head">Active Trains &middot; ${trains.length}</div>`;
+        trains.forEach(({ rec, sector, entry }, i) => {
+          const td = rec.trainData || {};
+          const customColor = getTrainColor(td.headcode, rec);
+          const isArriving = sector.status.startsWith("Arriving");
+          const isSelected = (rec.username === selectedUsername);
+          
+          const blockClass = sector.spad 
+            ? (sector.status.startsWith("SPAD") ? 'tc-block spad-active' : 'tc-block spad-static')
+            : `tc-block ${isArriving ? 'pulse' : ''}`;
+
+          const hasNoHeadcode = !td.headcode || td.headcode.trim() === "" || td.headcode === "----" || td.headcode.toLowerCase() === "unknown";
+          const cardHeadcode = hasNoHeadcode ? "UNROUTED" : td.headcode;
+
+          html += `
+            <div class="train-card ${isSelected?'train-card--selected':''}" data-user="${esc(rec.username)}" tabindex="0" style="border-left-color: ${customColor} !important; --glow-color: ${customColor}; --card-color: ${customColor}; animation-delay: ${i*0.03}s">
+              <div class="tc-row1">
+                <div class="tc-headcode" style="color: ${customColor}">${esc(cardHeadcode)}</div>
+                <div class="${blockClass}" style="--card-color: ${customColor}">${esc(sector.status)}</div>
+              </div>
+              <div class="tc-dest">
+                <span class="tc-arrow">&#8594;</span>
+                <span>Bound for ${esc(td.destination || 'Not Set')}</span>
+              </div>
+              <div class="tc-meta">
+                <div class="tc-driver">${svgPerson} ${esc(rec.username)}</div>
+                ${currentServerId==='all'?`<div style="font-size:10px; color:var(--dim); font-family:monospace">Srv ${esc(rec.shortId)}</div>`:''}
+              </div>
+            </div>`;
+        });
+      }
+
+      if (persons.length) {
+        html += `<div class="sec-head">Personnel On Foot &middot; ${persons.length}</div>`;
+        persons.forEach(({ rec, sector, entry }) => {
+          const isSelected = (rec.username === selectedUsername);
+          html += `
+            <div class="person-row ${isSelected?'person-row--selected':''}" data-user="${esc(rec.username)}" tabindex="0">
+              <div class="person-row__dot"></div>
+              <div class="person-row__name">
+                <span>${esc(rec.username)}</span>
+                <span style="font-size: 11px; color: var(--dim); font-weight: 500;">${esc(sector.status)}</span>
+              </div>
+              ${currentServerId==='all'?`<div style="margin-left:auto; font-size:10px; color:var(--dim); font-family:monospace">${esc(rec.shortId)}</div>`:''}
+            </div>`;
+        });
+      }
+
+      body.innerHTML = html;
+
+      body.querySelectorAll('[data-user]').forEach(el => {
+        const activate = () => {
+          selectPlayer(el.dataset.user);
+          if (isMobileLike()) document.body.classList.add('panel-hidden');
+        };
+        el.addEventListener('click', activate);
+        el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') activate(); });
+      });
+    }
+
+    /* ── WebSocket Controller ────────────────────────────────── */
+    const led = document.getElementById('ws-led');
+    const wsText = document.getElementById('ws-text');
+    let ws = null, reconnTimer = null;
+    const pendingServerPackets = new Map();
+    let flushQueued = false;
+
+    function queuePacketFlush() {
+      if (flushQueued) return;
+      flushQueued = true;
+      requestAnimationFrame(flushPendingPackets);
+    }
+
+    function flushPendingPackets() {
+      flushQueued = false;
+
+      let hasUpdates = false;
+
+      for (const [jobId, payload] of pendingServerPackets.entries()) {
+        pendingServerPackets.delete(jobId);
+
+        if (payload.shutdown) {
+          for (const entry of (servers.get(jobId) || new Map()).values()) {
+            map.removeLayer(entry.marker);
+            if (entry.data.username === selectedUsername) selectPlayer(null);
+          }
+          servers.delete(jobId);
+          hasUpdates = true;
+          continue;
+        }
+
+        if (!servers.has(jobId)) servers.set(jobId, new Map());
+        const srv = servers.get(jobId);
+        srv.lastUpdate = Date.now();
+
+        const activeUsernames = new Set(payload.players.map(p => p.username).filter(Boolean));
+
+        for (const [username, entry] of srv.entries()) {
+          if (!activeUsernames.has(username)) {
+            if (map.hasLayer(entry.marker)) map.removeLayer(entry.marker);
+            srv.delete(username);
+            if (username === selectedUsername) selectPlayer(null);
+            hasUpdates = true;
+          }
+        }
+
+        for (const player of payload.players) {
+          if (!player.username || !player.position) continue;
+          try {
+            hasUpdates = upsert(jobId, player) || hasUpdates;
+          } catch (err) {
+            console.error("Failsafe: error skipped while syncing player packet:", err);
+          }
+        }
+      }
+
+      if (hasUpdates) {
+        updateDropdown();
+        purgeStale();
+        schedPaint();
+      }
+    }
+
+    function connect () {
+      clearTimeout(reconnTimer);
+      if (ws) {
+        try { ws.close(); } catch (err) {}
+        ws = null;
+      }
+      
+      try {
+        ws = new WebSocket(WS_URL);
+
+        ws.addEventListener('open', () => { 
+          led.className = 'chip__led live'; 
+          wsText.textContent = 'Live Feed'; 
+        });
+
+        ws.addEventListener('message', ({ data }) => {
+          let msg; try { msg = JSON.parse(data); } catch { return; }
+          
+          const payloads = Array.isArray(msg) ? msg : [msg];
+
+          for (const m of payloads) {
+            if (!m?.jobId || !Array.isArray(m.players)) continue;
+
+            pendingServerPackets.set(m.jobId, {
+              players: m.players,
+              shutdown: m.players.length === 0 && !!m.serverShutdown,
+            });
+          }
+
+          queuePacketFlush();
+        });
+
+        ws.addEventListener('close', () => { 
+          led.className = 'chip__led error'; 
+          wsText.textContent = 'Reconnecting'; 
+          reconnTimer = setTimeout(connect, 5000); 
+        });
+        
+        ws.addEventListener('error', () => {
+          ws.close();
+        });
+      } catch (err) {
+        led.className = 'chip__led error';
+        wsText.textContent = 'Offline';
+        reconnTimer = setTimeout(connect, 5000);
+      }
+    }
+    connect();
+
+    /* ── UI Bindings ─────────────────────────────────────────── */
+    document.getElementById('server-select').addEventListener('change', (e) => {
+      currentServerId = e.target.value;
+      updateMapVisibility(); schedPaint();
+      syncPanelJoinVisibility();
+    });
+
+    const searchInput = document.getElementById('panel-search');
+    const searchClear = document.getElementById('search-clear');
+    
+    searchInput.addEventListener('input', () => {
+      searchClear.style.display = searchInput.value ? 'flex' : 'none';
+      schedPaint();
+    });
+    
+    searchClear.addEventListener('click', () => {
+      searchInput.value = '';
+      searchClear.style.display = 'none';
+      schedPaint();
+      searchInput.focus();
+    });
+
+    document.getElementById('changelog-toggle').addEventListener('click', () => {
+      document.getElementById('changelog-content').classList.toggle('open');
+    });
+
+    function syncDesktopToggleLabel() {
+      const toggle = document.getElementById('desktop-toggle');
+      const hidden = document.body.classList.contains('panel-hidden');
+      const label = toggle.querySelector('.desktop-toggle__label');
+      if (label) label.textContent = hidden ? 'Show List' : 'Hide List';
+      toggle.setAttribute('aria-label', hidden ? 'Open movements list' : 'Hide movements list');
+    }
+
+    const togglePanel = () => {
+      document.body.classList.toggle('panel-hidden');
+      syncDesktopToggleLabel();
+    };
+
+    document.getElementById('desktop-toggle').addEventListener('click', togglePanel);
+    document.getElementById('panel-close').addEventListener('click', togglePanel);
+    document.getElementById('mobile-fab').addEventListener('click', togglePanel);
+    if (!isMobileLike()) document.body.classList.remove('panel-hidden');
+    syncDesktopToggleLabel();
+  </script>
+</body>
+</html>
