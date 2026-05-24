@@ -725,7 +725,7 @@
 
       if (last) {
         const distanceMoved = Math.hypot(x - last.x, y - last.y);
-        if (distanceMoved > 500) { // previously 2000, temoprarily reduced to 500 to test more aggressive teleportation correction
+        if (distanceMoved > 500) { // previously 2000, temporarily reduced to 500 to test more aggressive teleportation correction
           motion.samples = []; 
         }
       }
@@ -1161,7 +1161,8 @@
       const spad = isSpadRisk(player);
       
       const speed = player.speed || 0;
-      setDOMText('pc-speed', speed < 1.5 ? 'Speed: Stationary' : `Speed: ${Math.round(speed)} studs/s`);
+      const mph = Math.round(speed * SPS_TO_MPH);
+      setDOMText('pc-speed', speed < 1.5 ? 'Speed: Stationary' : `Speed: ${mph} mph (${Math.round(speed)} studs/s)`);
       
       const badgeEl = document.getElementById('pc-status-badge');
       if (badgeEl.textContent !== sector.status) {
@@ -1519,58 +1520,6 @@
         }
       }
       if (uiNeedsUpdate) updateDropdown();
-    }
-
-    /* ── Advanced Signaling Block Analytics (Vector Dot Product) ───── */
-    function getSectorData(player, dx, dy) {
-      let minDistance = Infinity;
-      let nearestName = "Unknown";
-      
-      const px = Number(player.position.x) || 0;
-      const py = Number(player.position.y || player.position.z) || 0;
-
-      for (const [name, pos] of Object.entries(AREA_MARKERS)) {
-        const dist = Math.hypot(px - pos.x, py - pos.y);
-        if (dist < minDistance) { minDistance = dist; nearestName = name; }
-      }
-      
-      const isTrain = !!player.trainData;
-      if (!isTrain) {
-        const status = minDistance < 1500 ? `At ${nearestName}` : `Near ${nearestName}`;
-        return { station: nearestName, status };
-      }
-      
-      const speed = player.speed !== undefined ? player.speed : Math.hypot(dx, dy);
-      const spad = isSpadRisk(player);
-      let status = "";
-      
-      if (spad) {
-        status = `SPAD Risk @ ${nearestName}`;
-        return { station: nearestName, status, spad };
-      }
-      
-      const hasNoRoute = !player.trainData.headcode || player.trainData.headcode === "----" || !player.trainData.destination || player.trainData.destination.toLowerCase() === "unselected";
-      
-      if (speed < 1.5) {
-        if (hasNoRoute) {
-          status = minDistance < 1200 ? `No Route @ ${nearestName}` : "No Route (Siding)";
-        } else {
-          status = minDistance < 1200 ? `At ${nearestName}` : `Near ${nearestName}`;
-        }
-      } else {
-        const stationPos = AREA_MARKERS[nearestName];
-        const sx = stationPos.x - px;
-        const sy = stationPos.y - py;
-        const dotProduct = sx * dx + sy * dy;
-        
-        if (minDistance < 1500) {
-          status = dotProduct > 0 ? `Arriving at ${nearestName}` : `Departing ${nearestName}`;
-        } else {
-          status = dotProduct > 0 ? `En Route near ${nearestName}` : `Leaving ${nearestName} area`;
-        }
-      }
-      
-      return { station: nearestName, status, spad: false };
     }
 
     /* ── Sidebar Renderer ────────────────────────────────────── */
