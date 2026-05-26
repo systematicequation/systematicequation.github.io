@@ -658,6 +658,7 @@
       "Glassbury Junction": { x: 11592, y: 8663 }, "Dovedale Central": { x: 3157, y: 805 }, "Wington Mount": { x: 2922, y: -2830 },
       "Marigot Crossing": { x: 7692, y: 2205 }, "Satus": { x: -7485, y: -3055 }
     };
+    const AREA_MARKERS_ENTRIES = Object.entries(AREA_MARKERS);
 
     let currentServerId = 'all';
     let selectedUsername = null;
@@ -668,8 +669,13 @@
     const isMobileLike = () => window.innerWidth <= 768;
 
     /* ── High-Performance DOM Helper Utilities ── */
+    const domCache = new Map();
     function setDOMText(id, text) {
-      const el = document.getElementById(id);
+      let el = domCache.get(id);
+      if (!el) {
+        el = document.getElementById(id);
+        if (el) domCache.set(id, el);
+      }
       if (el && el.textContent !== text) el.textContent = text;
     }
     function setDOMDisplay(id, display) {
@@ -860,7 +866,7 @@
       const px = Number(player.position.x) || 0;
       const py = Number(player.position.y || player.position.z) || 0;
 
-      for (const [name, pos] of Object.entries(AREA_MARKERS)) {
+      for (const [name, pos] of AREA_MARKERS_ENTRIES) {
         const dist = Math.hypot(px - pos.x, py - pos.y);
         if (dist < minDistance) { minDistance = dist; nearestName = name; }
       }
@@ -884,7 +890,7 @@
       
       if (speed < 1.5) {
         if (hasNoRoute) {
-          status = minDistance < 1200 ? `No Route @ ${nearestName}` : "No Route (Siding)";
+          status = minDistance < 1200 ? `No Route (Siding)` : `No Route @ ${nearestName}`;
         } else {
           status = minDistance < 1200 ? `At ${nearestName}` : `Near ${nearestName}`;
         }
@@ -1239,8 +1245,12 @@
                 
                 const markerEl = entry.marker.getElement();
                 if (markerEl) {
-                  const trainGraphic = markerEl.querySelector('.mk__graphic-train');
-                  if (trainGraphic) trainGraphic.style.setProperty('--angle', `${motion.angle}rad`);
+                  if (!entry.trainGraphicEl || !markerEl.contains(entry.trainGraphicEl)) {
+                    entry.trainGraphicEl = markerEl.querySelector('.mk__graphic-train');
+                  }
+                  if (entry.trainGraphicEl) {
+                    entry.trainGraphicEl.style.setProperty('--angle', `${motion.angle}rad`);
+                  }
                 }
 
                 const currentLatLng = entry.marker.getLatLng();
@@ -1379,12 +1389,17 @@
       // prevents Chrome/WebKit from delaying the native <select> repaint
       setTimeout(() => {
         select.innerHTML = html;
-        void select.offsetHeight; // Forces a synchronous layout redraw in the rendering engine
+
+        // safely forces the repaint during the paint cycle
+        requestAnimationFrame(() => {
+          void select.offsetHeight; // Forces a synchronous layout redraw in the rendering engine
+        });
         
         // Clean up fallback selections cleanly inside the same macro-task
         if (!servers.has(currentServerId) && currentServerId !== 'all') {
           currentServerId = 'all'; select.value = 'all';
-          updateMapVisibility(); schedPaint();
+          updateMapVisibility();
+          schedPaint();
         }
         syncPanelJoinVisibility();
       }, 0);
@@ -1519,7 +1534,9 @@
           uiNeedsUpdate = true;
         }
       }
-      if (uiNeedsUpdate) updateDropdown();
+      if (uiNeedsUpdate) {
+        updateDropdown();
+      }
     }
 
     /* ── Sidebar Renderer ────────────────────────────────────── */
@@ -1775,7 +1792,8 @@
     /* ── UI Bindings ─────────────────────────────────────────── */
     document.getElementById('server-select').addEventListener('change', (e) => {
       currentServerId = e.target.value;
-      updateMapVisibility(); schedPaint();
+      updateMapVisibility();
+      schedPaint();
       syncPanelJoinVisibility();
 
       e.target.blur();
