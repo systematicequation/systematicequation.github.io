@@ -195,7 +195,68 @@
     .mk--selected .mk__graphic-person { border-color: var(--sel-color, var(--blue)); box-shadow: 0 0 0 3px var(--sel-color); }
 
     /* Radar Ping Wave Styling */
-    .ripple-wave { stroke-linecap: round; filter: drop-shadow(0 0 4px currentColor); pointer-events: none; }
+    .ripple-marker {
+      pointer-events: none;
+      z-index: 1 !important; /* Keep ripples below player labels but above tiles */
+    }
+    .ripple-container {
+      width: 128px;
+      height: 128px;
+      position: absolute;
+      /* Absolute center offsets prevent percentage-resolution layout bugs on 0x0 parents */
+      left: -64px;
+      top: -64px;
+      pointer-events: none;
+      /* Replicates original white-hot glass shadow 1:1 based on inherited color */
+      filter: drop-shadow(0 0 4px #f8fafc);
+    }
+    .ripple-wave-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      pointer-events: none;
+      transform-origin: center center;
+      /* Separates the eased scale transition from the linear opacity fade to match the original physics 1:1 */
+      animation: 
+        ripple-scale var(--ripple-duration, 1.2s) cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards,
+        ripple-fade var(--ripple-duration, 1.2s) linear forwards;
+    }
+    .ripple-circle {
+      stroke: currentColor;
+      fill: none;
+      vector-effect: non-scaling-stroke;
+      stroke-linecap: round;
+      transform-origin: center center;
+      /* Stroke weight thins out linearly as the wave expands */
+      animation: ripple-stroke var(--ripple-duration, 1.2s) linear forwards;
+    }
+
+    @keyframes ripple-scale {
+      0% {
+        transform: scale(var(--ripple-start-scale, 0.02));
+      }
+      100% {
+        transform: scale(var(--ripple-final-scale, 1));
+      }
+    }
+
+    @keyframes ripple-fade {
+      0% {
+        opacity: var(--ripple-opacity-start, 0.15);
+      }
+      100% {
+        opacity: 0;
+      }
+    }
+
+    @keyframes ripple-stroke {
+      0% {
+        stroke-width: var(--ripple-stroke-start, 2px);
+      }
+      100% {
+        stroke-width: 0.1px;
+      }
+    }
 
     /* ── Header UI ──────────────────────────────────────────────────── */
     #header {
@@ -605,7 +666,7 @@
                 <p><strong>👋 Hello! Welcome to my Dovedale Livemap.</strong></p>
                 <p>I built this to bring an alternative buttery-smooth livemap experience to the community. Performance has been deeply optimized to run flawlessly, even on low-end mobile devices. If you see me in-game, feel free to say hi!</p>
                 <ul style="padding-left: 16px; margin: 4px 0;">
-                  <li><strong>May 26, 2026:</strong> Performance enhancements, bug fixes, and general cleanup in preparation for upcoming big feature addition.</li>
+                  <li><strong>May 28, 2026:</strong> Performance enhancements, bug fixes, and general cleanup in preparation for upcoming big feature addition.</li>
                   <li><strong>May 24, 2026:</strong> Added this changelog! Resolved teleportation overshoots, refined SPAD estimation, mitigated XSS vulnerabilities, and added pristine pixel-art rendering.</li>
                 </ul>
                 <p style="font-size: 10px; opacity: 0.6; margin-top: 2px;"><em>Note: This is a personal hobby project. Generative AI was used as a tool to help draft boilerplate faster, but all code has been fully human-audited, scrutinized, and rewritten to guarantee strict security and prevent memory leaks. More information can be found in the README.md file in the root directory of this source tree.</em></p>
@@ -950,7 +1011,7 @@
     }
     map.fitBounds(mapBounds);
 
-    for (const [name, pos] of Object.entries(AREA_MARKERS)) {
+    for (const [name, pos] of AREA_MARKERS_ENTRIES) {
       const icon = L.divIcon({ className: 'custom-marker', html: `<div class="area-label">${name}</div>`, iconSize: [0, 0] });
       L.marker([-pos.y, pos.x], { icon, interactive: false, zIndexOffset: 2000 }).addTo(map);
     }
@@ -1027,33 +1088,51 @@
       if (!latlng || isNaN(latlng.lat) || isNaN(latlng.lng)) return;
       if (isZooming) return; // Prevent Leaflet SVG misalignment during zooms
 
-      const circle = L.circle(latlng, {
-        radius: 100, color: color, weight: isAlert ? 4 : 2,
-        fillColor: 'transparent', fillOpacity: 0, className: 'ripple-wave'
-      }).addTo(map);
-
+      const zoom = map.getZoom();
+      const scale = map.options.crs.scale(zoom);
       const maxRadius = isAlert ? 4000 : 2500;
-      const duration = isAlert ? 2000 : 1200;
-      const start = Date.now(); 
+      
+      // Calculate start and end pixel sizes matching the original map coordinate physics
+      const startDiameter = 200 * scale; // Starts exactly at 100 units radius
+      const finalDiameter = maxRadius * 2 * scale;
+      
+      // Convert to scale values relative to the 124px diameter drawn circle
+      const startScale = startDiameter / 124;
+      const finalScale = finalDiameter / 124;
+      
+      const duration = isAlert ? 2.0 : 1.2;
+      const opacityStart = isAlert ? 0.35 : 0.15;
+      const strokeWidth = isAlert ? 4 : 2;
 
-      function animate() {
-        if (!map.hasLayer(circle)) return;
-        const elapsed = Date.now() - start;
-        const progress = Math.min(elapsed / duration, 1);
-        const ease = progress * (2 - progress); 
-        
-        circle.setRadius(100 + ease * (maxRadius - 100));
-        
-        const opacityMultiplier = isAlert ? 0.35 : 0.15;
-        circle.setStyle({ 
-          opacity: (1 - progress) * opacityMultiplier, 
-          weight: (isAlert ? 4 : 2) * (1 - progress) 
-        });
+      const html = `
+        <div class="ripple-container" style="
+          color: ${color};
+          --ripple-duration: ${duration}s;
+          --ripple-opacity-start: ${opacityStart};
+          --ripple-start-scale: ${startScale};
+          --ripple-final-scale: ${finalScale};
+          --ripple-stroke-start: ${strokeWidth}px;
+        ">
+          <svg class="ripple-wave-svg" viewBox="0 0 128 128">
+            <circle class="ripple-circle" cx="64" cy="64" r="62" />
+          </svg>
+        </div>
+      `;
 
-        if (progress < 1) requestAnimationFrame(animate);
-        else if (map.hasLayer(circle)) map.removeLayer(circle);
-      }
-      requestAnimationFrame(animate);
+      const icon = L.divIcon({
+        className: 'ripple-marker',
+        html: html,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0]
+      });
+
+      const marker = L.marker(latlng, { icon: icon, interactive: false, zIndexOffset: -1000 }).addTo(map);
+
+      setTimeout(() => {
+        if (map.hasLayer(marker)) {
+          map.removeLayer(marker);
+        }
+      }, (duration * 1000) + 100);
     }
 
     /* ── Selection & Follow UX ───────────────────────────────── */
