@@ -106,6 +106,59 @@
 
     .leaflet-top.leaflet-right { margin-top: calc(var(--hdr-h) + 16px) !important; margin-right: max(24px, env(safe-area-inset-right)) !important; }
 
+    /* Custom vector tooltip style matching split-flap labels */
+    .custom-tooltip {
+      background: rgba(15, 23, 42, 0.95) !important;
+      border: 1px solid var(--border-hi) !important;
+      border-radius: 6px !important;
+      color: #fff !important;
+      font-family: 'DM Sans', sans-serif !important;
+      font-size: 11.5px !important;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.7) !important;
+      backdrop-filter: blur(8px) !important;
+      padding: 6px 12px !important;
+    }
+
+    /* ── Tactical Signal Box Polygons ────────────────────────────────── */
+    .sigbox-poly {
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 5px currentColor);
+      transition: stroke 0.4s ease, stroke-dasharray 0.4s ease, fill 0.4s ease, fill-opacity 0.4s ease;
+    }
+
+    /* Breathing, pulse animations */
+    @keyframes sigbox-calibrating-pulse {
+      0%, 100% { fill-opacity: 0.03; stroke-opacity: 0.55; }
+      50% { fill-opacity: 0.12; stroke-opacity: 0.95; }
+    }
+    @keyframes sigbox-warning-pulse {
+      0%, 100% { fill-opacity: 0.05; stroke-opacity: 0.6; }
+      50% { fill-opacity: 0.18; stroke-opacity: 1; }
+    }
+
+    .sigbox-syncing {
+      stroke-dasharray: 4 3;
+      animation: sigbox-calibrating-pulse 2.2s ease-in-out infinite;
+    }
+
+    .sigbox-active {
+      stroke-dasharray: none;
+      stroke-opacity: 0.95;
+      fill-opacity: 0.06;
+    }
+
+    .sigbox-abandoned {
+      stroke-dasharray: 6 3;
+      animation: sigbox-warning-pulse 1.2s ease-in-out infinite;
+    }
+
+    .sigbox-unclaimed {
+      stroke-dasharray: none;
+      stroke-opacity: 0.7;
+      fill-opacity: 0.03;
+    }
+
     /* ── Map Markers & Station Labels ───────────────────────────────── */
     .custom-marker { background: none; border: none; outline: none; }
 
@@ -430,6 +483,93 @@
     .pc-btn:hover { background: rgba(255,255,255,0.12); }
     .pc-btn.following { background: rgba(59, 130, 246, 0.2); border-color: var(--blue); color: #fff; box-shadow: 0 4px 24px rgba(59, 130, 246, 0.3); }
 
+    /* ── Tabbed Sidebar Navigation ────────────────────────────────── */
+    .panel__tabs { display: flex; background: rgba(15, 23, 42, 0.4); border-bottom: 1px solid var(--border); flex-shrink: 0; padding: 0 12px; }
+    .panel__tab { flex: 1; background: none; border: none; border-bottom: 3px solid transparent; color: var(--muted); padding: 14px 8px; font-family: inherit; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; }
+    .panel__tab:hover { color: var(--text); background: rgba(255, 255, 255, 0.01); }
+    .panel__tab--active { color: var(--amber) !important; border-bottom-color: var(--amber); }
+    .panel__tab-badge { font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 700; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border); padding: 2px 7px; border-radius: 99px; color: var(--muted); transition: all 0.2s ease; letter-spacing: 0.02em; transform-origin: center center; }
+    .panel__tab--active .panel__tab-badge { background: rgba(255, 255, 255, 0.1); border-color: var(--border-hi); color: var(--text); }
+    @keyframes tab-badge-glow { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 50% { transform: scale(1.06); box-shadow: 0 0 8px 2px rgba(16, 185, 129, 0.2); } }
+    .panel__tab-badge--available {
+      background: rgba(16, 185, 129, 0.15) !important;
+      border-color: rgba(16, 185, 129, 0.4) !important;
+      color: #a7f3d0 !important; /* Soft Green */
+      animation: tab-badge-glow 2.0s infinite ease-in-out;
+    }
+    .panel__tab-badge--grace {
+      background: rgba(245, 158, 11, 0.15) !important;
+      border-color: rgba(245, 158, 11, 0.4) !important;
+      color: #fde047 !important; /* Soft Yellow */
+    }
+    .panel__tab-badge--full {
+      background: rgba(239, 68, 68, 0.12) !important;
+      border-color: rgba(239, 68, 68, 0.3) !important;
+      color: #fca5a5 !important; /* Soft Red */
+    }
+
+    /* ── Signal Box Sidebar Rows ──────────────────────────────── */
+    .sigbox-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+      margin-bottom: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .sigbox-row::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, var(--glow-color, rgba(16, 185, 129, 0.15)) 0%, transparent 60%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .sigbox-row:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--border-hi);
+      transform: translateX(6px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+    .sigbox-row:hover::before {
+      opacity: 1;
+    }
+    .sigbox-row--selected {
+      background: rgba(255, 255, 255, 0.08) !important;
+      border-color: var(--sel-color, var(--green)) !important;
+      box-shadow: 0 0 24px var(--glow-color, rgba(16, 185, 129, 0.15)), inset 0 0 16px rgba(255, 255, 255, 0.05) !important;
+      transform: translateX(6px);
+    }
+    .sigbox-row--selected:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+    }
+    .sigbox-row__dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .sigbox-row__name {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sigbox-row__status {
+      font-size: 11px;
+      font-weight: 700;
+    }
+
     /* ── Sidebar Terminal List ──────────────────────────────────────── */
     #panel {
       position: fixed; top: calc(var(--hdr-h) + 16px); right: 24px; bottom: max(24px, env(safe-area-inset-bottom));
@@ -470,9 +610,20 @@
       font-size: 11.5px; color: rgba(248, 250, 252, 0.85); line-height: 1.45;
       background: rgba(0,0,0,0.25); padding: 12px 14px; border-radius: 8px; border-left: 3px solid var(--blue);
       display: flex; flex-direction: column; gap: 6px; margin-top: 8px;
+      
+      /* Scrollable configurations */
+      max-height: 160px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--dim) transparent;
     }
-    .changelog-content__inner p { margin: 0; }
-    .changelog-content__inner ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+    .changelog-content__inner::-webkit-scrollbar {
+      width: 4px;
+    }
+    .changelog-content__inner::-webkit-scrollbar-thumb {
+      background: var(--dim);
+      border-radius: 4px;
+    }
 
     .panel__join-row { display: flex; }
     .panel__join-row[hidden] { display: none; }
@@ -666,7 +817,8 @@
                 <p><strong>👋 Hello! Welcome to my Dovedale Livemap.</strong></p>
                 <p>I built this to bring an alternative buttery-smooth livemap experience to the community. Performance has been deeply optimized to run flawlessly, even on low-end mobile devices. If you see me in-game, feel free to say hi!</p>
                 <ul style="padding-left: 16px; margin: 4px 0;">
-                  <li><strong>May 28, 2026:</strong> Performance enhancements, bug fixes, and general cleanup in preparation for upcoming big feature addition.</li>
+                  <li><strong>May 28, 2026:</strong> Added Signal Box claim tracking! Patched Reflected XSS vulnerability, cleaned up DOM thrashing & potential memory leaks.</li>
+                  <li><strong>May 26, 2026:</strong> Performance enhancements, bug fixes, and general cleanup in preparation for upcoming big feature addition.</li>
                   <li><strong>May 24, 2026:</strong> Added this changelog! Resolved teleportation overshoots, refined SPAD estimation, mitigated XSS vulnerabilities, and added pristine pixel-art rendering.</li>
                 </ul>
                 <p style="font-size: 10px; opacity: 0.6; margin-top: 2px;"><em>Note: This is a personal hobby project. Generative AI was used as a tool to help draft boilerplate faster, but all code has been fully human-audited, scrutinized, and rewritten to guarantee strict security and prevent memory leaks. More information can be found in the README.md file in the root directory of this source tree.</em></p>
@@ -687,6 +839,19 @@
         </div>
       </div>
     </div>
+
+    <!-- Tabbed Navigation Bar -->
+    <div class="panel__tabs">
+      <button class="panel__tab panel__tab--active" id="tab-movements" data-tab="movements">
+        <span>Activity</span>
+        <span class="panel__tab-badge" id="badge-movements">0</span>
+      </button>
+      <button class="panel__tab" id="tab-sigboxes" data-tab="signal-boxes">
+        <span>Signal Boxes</span>
+        <span class="panel__tab-badge" id="badge-sigboxes">0</span>
+      </button>
+    </div>
+
     <div class="panel__search-container">
       <div class="search-wrapper">
         <input type="text" id="panel-search" class="panel-search" placeholder="Search driver, headcode, station..." />
@@ -722,8 +887,118 @@
     };
     const AREA_MARKERS_ENTRIES = Object.entries(AREA_MARKERS);
 
+    const SIGNAL_BOXES = { // X = Roblox -Z (e.g. -2964 is 2964 in leaflet), Y = Roblox X (normal)
+      "AB": {
+        name: "Ashburn",
+        polygon: [[6614, -21488], [6612, -21509], [6621, -21510], [6623, -21489]] // GOOD
+      },
+      "BL": {
+        name: "Benyhone Loop",
+        polygon: [[4960, -19078], [4960, -19054], [4936, -19054], [4936, -19078]]
+      },
+      "FM": {
+        name: "Fanory Mill",
+        polygon: [[4065, -16448], [4065, -16412], [4029, -16412], [4029, -16448]]
+      },
+      "SAT": {
+        name: "Satus",
+        polygon: [[2972, -7291], [2960, -7295], [2954, -7273], [2967, -7270]] // GOOD
+      },
+      "DE": {
+        name: "Dovedale East",
+        polygon: [[-195, 825], [-195, 881], [-251, 881], [-251, 825]]
+      },
+      "CH": {
+        name: "Cosdale Harbour",
+        polygon: [[2627, 4361], [2627, 4405], [2583, 4405], [2583, 4361]]
+      },
+      "DCent": {
+        name: "Dovedale Central",
+        polygon: [[-622, 3025], [-622, 3091], [-688, 3091], [-688, 3025]]
+      },
+      "GE": {
+        name: "Gleethrop End",
+        polygon: [[-3270, 1541], [-3270, 1573], [-3302, 1573], [-3302, 1541]]
+      },
+      "MW": {
+        name: "Mazewood",
+        polygon: [[-5777, -4653], [-5777, -4629], [-5801, -4629], [-5801, -4653]]
+      },
+      "MC": {
+        name: "Marigot Crossing",
+        polygon: [[-2167, 7674], [-2167, 7702], [-2195, 7702], [-2195, 7674]]
+      },
+      "CC": {
+        name: "Codsall Castle",
+        polygon: [[-5140, 9964], [-5140, 9990], [-5166, 9990], [-5166, 9964]]
+      },
+      "GJ": {
+        name: "Glassbury Junction",
+        polygon: [[-8020, 11633], [-8020, 11673], [-8060, 11673], [-8060, 11633]]
+      },
+      "MS": {
+        name: "Masonfield",
+        polygon: [[629, 10405], [629, 10445], [589, 10445], [589, 10405]]
+      }
+    };
+    const SIGNAL_BOXES_ENTRIES = Object.entries(SIGNAL_BOXES);
+    const SIGNAL_BOXES_KEYS = Object.keys(SIGNAL_BOXES);
+
+    // Calculate broad-phase AABB limits and compute exact center centroids directly from polygons
+    for (const box of Object.values(SIGNAL_BOXES)) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      let area = 0, cx = 0, cy = 0;
+      
+      const poly = box.polygon;
+      const len = poly.length;
+
+      for (let i = 0; i < len; i++) {
+        const [lat, lng] = poly[i];
+        
+        // Standardize Leaflet bounds for AABB check
+        const px = lng;
+        const py = -lat; 
+        if (px < minX) minX = px;
+        if (px > maxX) maxX = px;
+        if (py < minY) minY = py;
+        if (py > maxY) maxY = py;
+
+        // Shoelace algorithm for exact centroid math (supports ANY polygon shape)
+        const [nextLat, nextLng] = poly[(i + 1) % len];
+        const cross = (lat * nextLng) - (nextLat * lng);
+        area += cross;
+        cx += (lat + nextLat) * cross;
+        cy += (lng + nextLng) * cross;
+      }
+
+      // Store AABB limits
+      box.minX = minX;
+      box.maxX = maxX;
+      box.minY = minY;
+      box.maxY = maxY;
+
+      // Finalize and cache the center math once at startup
+      area *= 0.5;
+      if (area !== 0) {
+        box.center = [cx / (6 * area), cy / (6 * area)];
+      } else {
+        box.center = [poly[0][0], poly[0][1]]; // Failsafe for dots/lines
+      }
+    }
+
+    const signalBoxStates = new Map(); // serverId -> { boxKey -> state }
+    const signalBoxLayers = {};
+    const serverStartupSync = new Map(); // serverId -> syncEndTime
+
+    // Throttle processing to avoid high CPU on mobile/high-packet rates
+    let lastSignalBoxProcess = 0;
+    const SIGNALBOX_PROCESS_INTERVAL_MS = 300; // ms between heavy claim computations
+
     let currentServerId = 'all';
     let selectedUsername = null;
+    let selectedBoxKey = null; // Currently selected signal box
+    let currentTab = 'movements'; // Active tab view: 'movements' | 'signal-boxes'
+    let scrollContainerToTopOnNextPaint = false; // Flag to snap scroll layout to top when selecting trains
     let isFollowing = false;
     let isZooming = false; // Viewport Pruning Lock
     let cachedPaddedBounds = null;
@@ -972,17 +1247,230 @@
       return { station: nearestName, status, spad: false };
     }
 
+    // High-performance Point-In-Polygon check matching Leaflet polygon coordinates
+    function isPointInBoxPolygon(px, py, polygon) {
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const yi = -polygon[i][0], xi = polygon[i][1];
+        const yj = -polygon[j][0], xj = polygon[j][1];
+        const intersect = ((yi > py) !== (yj > py))
+            && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    function getSignalBoxStatesForServer(serverId) {
+      if (!signalBoxStates.has(serverId)) {
+        const states = {};
+        for (const boxKey of SIGNAL_BOXES_KEYS) {
+          states[boxKey] = {
+            owner: null,
+            whitelist: new Set(),
+            occupants: [], // { userId, username, enteredAt }
+            abandonedAt: null
+          };
+        }
+        signalBoxStates.set(serverId, states);
+        serverStartupSync.set(serverId, Date.now() + 90000); // 90 second warmup buffer
+      }
+      return signalBoxStates.get(serverId);
+    }
+
+    /**
+     * ── Signal Box Claiming State Engine ────────────────────────────────
+     * 
+     * DISCLAIMER: This claiming system runs entirely client-side and relies 
+     * on point-in-polygon coordinate calculations. Because 3D height is 
+     * flattened in this mapping context, players sitting AFK on the roof 
+     * of a signal box building may occasionally trigger a claim.
+     * 
+     * We mitigate transient false-claims by enforcing:
+     * 1. A 90-second Connection Startup Synchronization calibration buffer
+     * 2. Excluding active train drivers (on-foot players only)
+     */
+    function processSignalBoxClaims() {
+      const CLAIM_GRACE_PERIOD_MS = 90000; // 90 seconds
+      const now = Date.now();
+
+      // Throttle heavy recomputation to once per interval
+      if (now - lastSignalBoxProcess < SIGNALBOX_PROCESS_INTERVAL_MS) return;
+      lastSignalBoxProcess = now;
+
+      for (const [serverId, srvMap] of servers.entries()) {
+        const states = getSignalBoxStatesForServer(serverId);
+        const syncUntil = serverStartupSync.get(serverId) || 0;
+        const isSyncing = now < syncUntil;
+        
+        // Setup raw occupancy buckets for this tick
+        const physicalOccupants = {};
+        for (const boxKey of SIGNAL_BOXES_KEYS) {
+          physicalOccupants[boxKey] = [];
+        }
+
+        // Loop through on-foot operators to check bounding boxes
+        for (const entry of srvMap.values()) {
+          const player = entry.data;
+          if (player.trainData) continue; // Skip train drivers (Optimization)
+
+          const px = Number(player.position.x) || 0;
+          const py = Number(player.position.y || player.position.z) || 0;
+
+          for (const [boxKey, boxData] of SIGNAL_BOXES_ENTRIES) {
+            // Broad-phase boundary check (instantly reject most players without expensive polygon check whoopee)
+            if (px < boxData.minX || px > boxData.maxX || py < boxData.minY || py > boxData.maxY) {
+              continue;
+            }
+            // Narrow-phase precise check
+            if (isPointInBoxPolygon(px, py, boxData.polygon)) {
+              physicalOccupants[boxKey].push({
+                userId: player.username,
+                username: player.username
+              });
+            }
+          }
+        }
+
+        // Process governance rules and transition logic
+        for (const [boxKey, boxState] of Object.entries(states)) {
+          const activeInside = physicalOccupants[boxKey];
+          const activeInsideIds = new Set(activeInside.map(p => p.userId));
+
+          // Sync occupants list (who is physically inside right now)
+          boxState.occupants = boxState.occupants.filter(occ => activeInsideIds.has(occ.userId));
+
+          activeInside.forEach(player => {
+            const isAlreadyQueued = boxState.occupants.some(occ => occ.userId === player.userId);
+            if (!isAlreadyQueued) {
+              boxState.occupants.push({
+                userId: player.userId,
+                username: player.username,
+                enteredAt: now
+              });
+            }
+          });
+
+          // Claim transitions
+          if (!boxState.owner) {
+            if (boxState.occupants.length > 0) {
+              const firstIn = boxState.occupants[0];
+              boxState.owner = {
+                userId: firstIn.userId,
+                username: firstIn.username,
+                claimedAt: now
+              };
+              boxState.whitelist = new Set([firstIn.userId]);
+              boxState.abandonedAt = null;
+            }
+          } else {
+            const isOwnerInside = activeInsideIds.has(boxState.owner.userId);
+            if (isOwnerInside) {
+              boxState.abandonedAt = null;
+            } else {
+              if (boxState.abandonedAt === null) {
+                boxState.abandonedAt = now;
+              }
+              const elapsedOutside = now - boxState.abandonedAt;
+              if (elapsedOutside >= CLAIM_GRACE_PERIOD_MS) {
+                boxState.owner = null;
+                boxState.whitelist.clear();
+                boxState.abandonedAt = null;
+
+                // Pass claims to next eldest occupant physically inside
+                if (boxState.occupants.length > 0) {
+                  const nextInLine = boxState.occupants[0];
+                  boxState.owner = {
+                    userId: nextInLine.userId,
+                    username: nextInLine.username,
+                    claimedAt: now
+                  };
+                  boxState.whitelist = new Set([nextInLine.userId]);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      updateSignalBoxMapLayers();
+    }
+
+    function updateSignalBoxMapLayers() {
+      const activeServer = currentServerId;
+      const now = Date.now();
+      const syncUntil = serverStartupSync.get(activeServer) || 0;
+      const isSyncing = now < syncUntil;
+      
+      for (const [boxKey, poly] of Object.entries(signalBoxLayers)) {
+        let statusColor = '#10b981'; // Unclaimed -> GREEN (Go claim!)
+        let activeClass = 'sigbox-unclaimed';
+
+        if (activeServer !== 'all' && signalBoxStates.has(activeServer)) {
+          const states = signalBoxStates.get(activeServer);
+          const boxState = states[boxKey];
+          
+          if (isSyncing) {
+            statusColor = '#3b82f6'; // Syncing / Blue
+            activeClass = 'sigbox-syncing';
+          } else if (boxState && boxState.owner) {
+            statusColor = '#ef4444'; // Claimed -> RED (Stop/Occupied)
+            activeClass = 'sigbox-active';
+
+            if (boxState.abandonedAt !== null) {
+              statusColor = '#f59e0b'; // Abandoned / Grace Period -> Amber
+              activeClass = 'sigbox-abandoned';
+            }
+          }
+        } else if (activeServer === 'all') {
+          let claimedCount = 0;
+          let totalServers = 0;
+          for (const [serverId, states] of signalBoxStates.entries()) {
+            if (servers.has(serverId)) {
+              totalServers++;
+              if (states[boxKey] && states[boxKey].owner) claimedCount++;
+            }
+          }
+          if (totalServers > 0) {
+            if (claimedCount === totalServers) {
+              statusColor = '#ef4444'; // All claimed on all active servers -> Red
+              activeClass = 'sigbox-active';
+            } else if (claimedCount > 0) {
+              statusColor = '#f59e0b'; // Partially claimed -> Amber
+              activeClass = 'sigbox-abandoned';
+            } else {
+              statusColor = '#10b981'; // All vacant -> Green
+              activeClass = 'sigbox-unclaimed';
+            }
+          }
+        }
+
+        poly.setStyle({
+          color: statusColor,
+          fillColor: statusColor
+        });
+
+        if (poly._path) {
+          poly._path.setAttribute('class', `leaflet-interactive sigbox-poly ${activeClass}`);
+        }
+
+        const tooltip = poly.getTooltip();
+        if (tooltip) {
+          poly.setTooltipContent(getSignalBoxTooltipContent(boxKey));
+        }
+      }
+    }
+
     function getTrainColor(headcode, player) {
-      if (player && hasNoActiveRoute(player)) return '#ef4444'; 
-      if (!headcode) return '#10b981'; 
+      if (player && hasNoActiveRoute(player)) return '#ef4444';
+      if (!headcode) return '#10b981';
       const cls = headcode.trim().charAt(0);
       switch (cls) {
-        case '1': return '#a855f7'; 
-        case '2': return '#10b981'; 
-        case '3': return '#3b82f6'; 
-        case '5': return '#ec4899'; 
-        case '0': return '#f59e0b'; 
-        default:  return hashStringToColor(headcode); 
+        case '1': return '#a855f7';
+        case '2': return '#10b981';
+        case '3': return '#3b82f6';
+        case '5': return '#ec4899';
+        case '0': return '#f59e0b';
+        default:  return hashStringToColor(headcode);
       }
     }
 
@@ -1005,7 +1493,7 @@
     const chunkWidth = (L_EAST - L_WEST) / COLUMNS;
     for (let c = 0; c < COLUMNS; c++) {
       const west = L_WEST + (c * chunkWidth);
-      const east = west + chunkWidth + 15.0; 
+      const east = west + chunkWidth + 15.0;
       const bounds = [[L_SOUTH, west], [L_NORTH, east]];
       L.imageOverlay(`https://raw.githubusercontent.com/dovedalerailway/dovedale-map/main/public/images/row-1-column-${c + 1}.png`, bounds).addTo(map);
     }
@@ -1016,11 +1504,35 @@
       L.marker([-pos.y, pos.x], { icon, interactive: false, zIndexOffset: 2000 }).addTo(map);
     }
 
+    // Initialize interactive vector shapes for signal box boundaries
+    for (const [boxKey, boxData] of SIGNAL_BOXES_ENTRIES) {
+      const poly = L.polygon(boxData.polygon, {
+        color: '#ef4444',
+        weight: 1.5,
+        fillColor: '#ef4444',
+        fillOpacity: 0.04,
+        interactive: true
+      }).addTo(map);
+
+      poly.bindTooltip(getSignalBoxTooltipContent(boxKey), {
+        className: 'custom-tooltip',
+        direction: 'top',
+        sticky: true
+      });
+
+      poly.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        selectSignalBox(boxKey);
+      });
+
+      signalBoxLayers[boxKey] = poly;
+    }
+
     map.on('dragstart', () => { document.body.classList.add('map-moving'); if (isFollowing) toggleFollow(false); });
     map.on('zoomstart', () => { isZooming = true; document.body.classList.add('map-moving'); }); // Viewport lock engaged
     map.on('zoomend', () => { isZooming = false; updateMapVisibility(); }); // Viewport lock disengaged
     map.on('moveend dragend', () => setTimeout(() => document.body.classList.remove('map-moving'), 50));
-    map.on('click', () => selectPlayer(null));
+    map.on('click', () => { selectPlayer(null); selectSignalBox(null); });
 
     function updateCachedBounds() {
       cachedPaddedBounds = map.getBounds().pad(0.15);
@@ -1073,7 +1585,7 @@
 
     /* ── State & SVGs ────────────────────────────────────────── */
     const servers = new Map();
-    const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const esc = s => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     
     const svgPerson = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
     
@@ -1138,6 +1650,20 @@
     /* ── Selection & Follow UX ───────────────────────────────── */
     function selectPlayer(username) {
       if (selectedUsername === username) return;
+
+      // Deselect signal box if we are selecting a player
+      if (username && selectedBoxKey) {
+        selectSignalBox(null);
+      }
+      
+      // Switch to Movements tab when focusing a player
+      if (username && currentTab !== 'movements') {
+        currentTab = 'movements';
+        document.querySelectorAll('.panel__tab').forEach(t => {
+          t.classList.toggle('panel__tab--active', t.dataset.tab === currentTab);
+        });
+      }
+
       selectedUsername = username;
       isFollowing = false;
       document.getElementById('pc-follow').classList.remove('following');
@@ -1157,6 +1683,11 @@
             entry.marker.setZIndexOffset(isSelected ? 1000 : (entry.data.trainData ? 100 : 0));
           }
         }
+      }
+
+      // Only scroll the panel to the top if the selected entity is a Train
+      if (username && found && found.data.trainData) {
+        scrollContainerToTopOnNextPaint = true;
       }
 
       schedPaint();
@@ -1191,7 +1722,7 @@
         }
 
         setDOMText('pc-driver', `Operator: ${found.data.username}`);
-        setDOMText('pc-server', `Server: ${foundJobId.substring(0,8)}`);
+        setDOMText('pc-server', `Server: ${foundJobId.substring(0,8)}`); // 0,8)} | [${-Math.round(found.data.position.y || found.data.position.z)}, ${Math.round(found.data.position.x)}]`); // FOR DEBUGGING
         
         const speed = found.data.speed || 0;
         const mph = Math.round(speed * SPS_TO_MPH);
@@ -1218,6 +1749,127 @@
         card.classList.remove('active');
         document.body.classList.remove('pc-card-active');
       }
+    }
+
+    function getSignalBoxTooltipContent(boxKey) {
+      const activeServer = currentServerId;
+      const now = Date.now();
+      const syncUntil = serverStartupSync.get(activeServer) || 0;
+      const isSyncing = now < syncUntil;
+      
+      let statusColor = '#10b981'; // Unclaimed -> Green
+      let statusText = 'Vacant · Free to Claim';
+
+      if (activeServer !== 'all' && signalBoxStates.has(activeServer)) {
+        const states = signalBoxStates.get(activeServer);
+        const boxState = states[boxKey];
+        
+        if (isSyncing) {
+          statusColor = '#3b82f6';
+          const remaining = Math.max(0, Math.ceil((syncUntil - now) / 1000));
+          const occupantsCount = boxState ? boxState.occupants.length : 0;
+          statusText = `Calibrating Claims (${remaining}s) · ${occupantsCount} inside`;
+        } else if (boxState && boxState.owner) {
+          statusColor = '#ef4444'; // Claimed -> Red
+          statusText = `Claimed by: ${esc(boxState.owner.username)}`;
+
+          if (boxState.abandonedAt !== null) {
+            statusColor = '#f59e0b'; // Grace period -> Amber
+            const remaining = Math.max(0, Math.ceil((90000 - (now - boxState.abandonedAt)) / 1000));
+            statusText = `Leaving: ${esc(boxState.owner.username)} (${remaining}s remaining)`;
+          }
+        }
+      } else if (activeServer === 'all') {
+        let claimedCount = 0;
+        let totalServers = 0;
+        for (const [serverId, states] of signalBoxStates.entries()) {
+          if (servers.has(serverId)) {
+            totalServers++;
+            if (states[boxKey] && states[boxKey].owner) claimedCount++;
+          }
+        }
+        if (totalServers > 0) {
+          if (claimedCount === totalServers) {
+            statusColor = '#ef4444';
+            statusText = `Claimed on all active servers (${claimedCount}/${totalServers})`;
+          } else if (claimedCount > 0) {
+            statusColor = '#f59e0b';
+            statusText = `Claimed on ${claimedCount}/${totalServers} servers`;
+          } else {
+            statusColor = '#10b981';
+            statusText = `Vacant across all servers · Free to Claim`;
+          }
+        }
+      }
+
+      return `<strong>${SIGNAL_BOXES[boxKey].name}</strong><br><span style="color: ${statusColor}">${statusText}</span>`;
+    }
+
+    function selectSignalBox(boxKey) {
+      if (selectedBoxKey === boxKey) return;
+
+      // Switch to Signal Boxes tab when focusing a signal box
+      if (boxKey && currentTab !== 'signal-boxes') {
+        currentTab = 'signal-boxes';
+        document.querySelectorAll('.panel__tab').forEach(t => {
+          t.classList.toggle('panel__tab--active', t.dataset.tab === currentTab);
+        });
+      }
+
+      // 1. If we had a previously selected box, restore its tooltip to standard sticky hover
+      if (selectedBoxKey) {
+        const prevLayer = signalBoxLayers[selectedBoxKey];
+        if (prevLayer) {
+          prevLayer.closeTooltip();
+          prevLayer.unbindTooltip();
+          
+          const content = getSignalBoxTooltipContent(selectedBoxKey);
+          prevLayer.bindTooltip(content, {
+            className: 'custom-tooltip',
+            direction: 'top',
+            sticky: true,
+            permanent: false
+          });
+        }
+      }
+
+      // Deselect player if we are selecting a box
+      if (boxKey && selectedUsername) {
+        selectPlayer(null);
+      }
+
+      selectedBoxKey = boxKey;
+
+      if (selectedBoxKey) {
+        const layer = signalBoxLayers[selectedBoxKey];
+        const boxData = SIGNAL_BOXES[selectedBoxKey];
+        if (layer && boxData) {
+          layer.closeTooltip();
+          layer.unbindTooltip();
+
+          const content = getSignalBoxTooltipContent(selectedBoxKey);
+          layer.bindTooltip(content, {
+            className: 'custom-tooltip',
+            direction: 'top',
+            sticky: false,
+            permanent: true // Keep open and centered!
+          });
+
+          const centerLatLng = L.latLng(boxData.center[0], boxData.center[1]);
+          layer.openTooltip(centerLatLng);
+          
+          // Pan map viewport to polygon center centroid
+          map.panTo(centerLatLng, { animate: true, duration: 0.8 });
+          
+          // Spawn status-matched visual ripple wave
+          const states = signalBoxStates.get(currentServerId);
+          const isOwnerAbandoned = states && states[selectedBoxKey] && states[selectedBoxKey].abandonedAt !== null;
+          const rippleColor = isOwnerAbandoned ? '#f59e0b' : '#10b981';
+          triggerRipple(centerLatLng, rippleColor, false);
+        }
+      }
+
+      schedPaint(); // Trigger sidebar state redraw to apply highlight class
     }
 
     function toggleFollow(forceState) {
@@ -1249,6 +1901,7 @@
       const speed = player.speed || 0;
       const mph = Math.round(speed * SPS_TO_MPH);
       setDOMText('pc-speed', speed < 1.5 ? 'Speed: Stationary' : `Speed: ${mph} mph (${Math.round(speed)} studs/s)`);
+      // setDOMText('pc-server', `Server: ${jobId.substring(0,8)} | [${-Math.round(player.position.y || player.position.z)}, ${Math.round(player.position.x)}]`); // FOR DEBUGGING
       
       const badgeEl = document.getElementById('pc-status-badge');
       if (badgeEl.textContent !== sector.status) {
@@ -1316,11 +1969,11 @@
           if (entry.marker) {
             // Viewport Pruning Lock during zooms to prevent layout ghost offsets
             if (!isZooming) {
-              const isInside = paddedBounds.contains(motion.latlng); 
+              const isInside = paddedBounds.contains(motion.latlng);
               
               if (isInside) {
                 if (!map.hasLayer(entry.marker)) {
-                  entry.marker.addTo(map); 
+                  entry.marker.addTo(map);
                 }
                 
                 const markerEl = entry.marker.getElement();
@@ -1339,7 +1992,7 @@
                 }
               } else {
                 if (map.hasLayer(entry.marker) && !entry.isSelected) {
-                  map.removeLayer(entry.marker); 
+                  map.removeLayer(entry.marker);
                 }
               }
             } else {
@@ -1479,6 +2132,7 @@
         if (!servers.has(currentServerId) && currentServerId !== 'all') {
           currentServerId = 'all'; select.value = 'all';
           updateMapVisibility();
+          updateSignalBoxMapLayers(); // <-- RE-RENDER VECTORS
           schedPaint();
         }
         syncPanelJoinVisibility();
@@ -1611,11 +2265,14 @@
             if (entry.data.username === selectedUsername) selectPlayer(null);
           }
           servers.delete(jobId);
+          signalBoxStates.delete(jobId); // Clean up stale server claims
+          serverStartupSync.delete(jobId); // Resolve startup sync leak
           uiNeedsUpdate = true;
         }
       }
       if (uiNeedsUpdate) {
         updateDropdown();
+        updateSignalBoxMapLayers();
       }
     }
 
@@ -1629,7 +2286,10 @@
       
       setDOMText('panel-sub', currentServerId === 'all' 
         ? 'Real-time trains and crew across every server.' 
-        : `Viewing active movements in Server ${currentServerId.substring(0,6)}.`);
+        : `Viewing activity in Server ${currentServerId.substring(0,6)}.`);
+
+      const syncUntil = serverStartupSync.get(currentServerId) || 0;
+      const isSyncing = Date.now() < syncUntil;
 
       const trains = [], persons = [];
       const mapCenter = map.getCenter();
@@ -1668,88 +2328,424 @@
 
       trains.sort((a, b) => a.inView - b.inView || a.distance - b.distance || (a.rec.trainData?.headcode||'').localeCompare(b.rec.trainData?.headcode||''));
       persons.sort((a, b) => a.inView - b.inView || a.distance - b.distance || a.rec.username.localeCompare(b.rec.username));
+      
+      // Calculate tab badge metrics
+      let unfilteredMovementsCount = 0;
+      for (const [jobId, srv] of servers) {
+        if (currentServerId !== 'all' && currentServerId !== jobId) continue;
+        unfilteredMovementsCount += srv.size;
+      }
+
+      let unclaimedBoxesCount = 0;
+      let graceBoxesCount = 0;
+      
+      if (currentServerId !== 'all') {
+        if (signalBoxStates.has(currentServerId)) {
+          const states = signalBoxStates.get(currentServerId);
+          if (!isSyncing) {
+            const activeStates = Object.values(states);
+            unclaimedBoxesCount = SIGNAL_BOXES_KEYS.length - activeStates.filter(s => s.owner).length;
+            graceBoxesCount = activeStates.filter(s => s.owner && s.abandonedAt !== null).length;
+          }
+        }
+      } else {
+        let anyCalibrating = false;
+        for (const [jobId, syncTime] of serverStartupSync.entries()) {
+          if (servers.has(jobId) && Date.now() < syncTime) {
+            anyCalibrating = true;
+            break;
+          }
+        }
+        if (!anyCalibrating) {
+          const globallyManned = new Map();
+          for (const boxKey of SIGNAL_BOXES_KEYS) {
+            globallyManned.set(boxKey, []);
+          }
+          for (const [serverId, states] of signalBoxStates.entries()) {
+            if (!servers.has(serverId)) continue;
+            for (const [boxKey, boxState] of Object.entries(states)) {
+              globallyManned.get(boxKey).push({ 
+                serverId, 
+                owner: boxState.owner, 
+                abandonedAt: boxState.abandonedAt 
+              });
+            }
+          }
+          for (const [boxKey, list] of globallyManned.entries()) {
+            const activeClaims = list.filter(m => m.owner);
+            if (activeClaims.length === 0) {
+              unclaimedBoxesCount++;
+            } else {
+              const hasGraceActive = activeClaims.some(m => m.abandonedAt !== null);
+              if (hasGraceActive) graceBoxesCount++;
+            }
+          }
+        }
+      }
 
       setDOMText('panel-stat-summary', `${trains.length} Trains · ${persons.length} On Foot`);
       setDOMText('panel-stat-server', currentServerId === 'all' ? 'All servers' : `Server ${currentServerId.substring(0,6)}`);
       
+      // Update badge counts dynamically
+      setDOMText('badge-movements', String(unfilteredMovementsCount));
+      
+      const sigboxBadge = document.getElementById('badge-sigboxes');
+      if (sigboxBadge) {
+        sigboxBadge.classList.remove('panel__tab-badge--available', 'panel__tab-badge--grace', 'panel__tab-badge--full');
+        
+        if (unclaimedBoxesCount > 0) {
+          setDOMText('badge-sigboxes', String(unclaimedBoxesCount));
+          sigboxBadge.classList.add('panel__tab-badge--available');
+        } else if (graceBoxesCount > 0) {
+          setDOMText('badge-sigboxes', String(graceBoxesCount));
+          sigboxBadge.classList.add('panel__tab-badge--grace');
+        } else {
+          setDOMText('badge-sigboxes', '0');
+          sigboxBadge.classList.add('panel__tab-badge--full');
+        }
+      }
+      
       const spadNote = document.getElementById('panel-spad-note');
       if (spadNote) spadNote.classList.toggle('active', trains.some((t) => t.sector.spad));
 
-      // Optimized string builder loop to bypass array instantiation and JSON serialization overhead
-      let stateHash = '';
-      for (let i = 0; i < trains.length; i++) {
-        const t = trains[i];
-        stateHash += t.rec.username + (t.rec.trainData?.headcode || '') + t.sector.status + (t.entry.isSelected ? '1' : '0');
-      }
-      for (let i = 0; i < persons.length; i++) {
-        const p = persons[i];
-        stateHash += p.rec.username + p.sector.status + (p.entry.isSelected ? '1' : '0');
+      // Generate a reactive DOM hash segmented by active tab to prevent unnecessary updates
+      let stateHash = currentTab + '_' + query + '_';
+      
+      if (currentTab === 'movements') {
+        for (let i = 0; i < trains.length; i++) {
+          const t = trains[i];
+          stateHash += t.rec.username + (t.rec.trainData?.headcode || '') + t.sector.status + (t.entry.isSelected ? '1' : '0');
+        }
+        for (let i = 0; i < persons.length; i++) {
+          const p = persons[i];
+          stateHash += p.rec.username + p.sector.status + (p.entry.isSelected ? '1' : '0');
+        }
+      } else if (currentTab === 'signal-boxes') {
+        stateHash += isSyncing ? 'syncing' : 'active';
+        for (let i = 0; i < SIGNAL_BOXES_KEYS.length; i++) {
+          const boxKey = SIGNAL_BOXES_KEYS[i];
+          const isSelected = (selectedBoxKey === boxKey) ? '1' : '0';
+          let boxDataStr = '';
+          
+          if (currentServerId !== 'all' && signalBoxStates.has(currentServerId)) {
+            const boxState = signalBoxStates.get(currentServerId)[boxKey];
+            boxDataStr = boxState.owner ? (boxState.owner.username + (boxState.abandonedAt !== null ? '1' : '0')) : '0';
+          } else {
+            let claimedCount = 0;
+            for (const states of signalBoxStates.values()) {
+              if (states[boxKey] && states[boxKey].owner) claimedCount++;
+            }
+            boxDataStr = String(claimedCount);
+          }
+          stateHash += boxKey + boxDataStr + isSelected;
+        }
       }
 
       if (body.dataset.hash === stateHash) return;
       body.dataset.hash = stateHash;
 
-      if (!trains.length && !persons.length) {
-        body.innerHTML = `<div class="empty"><span class="empty__glyph">🚂</span><div class="empty__text">No players found matching search.</div></div>`;
-        return;
-      }
-
       let html = '';
       
-      if (trains.length) {
-        html += `<div class="sec-head">Active Trains &middot; ${trains.length}</div>`;
-        trains.forEach(({ rec, sector, entry }, i) => {
-          const td = rec.trainData || {};
-          const customColor = getTrainColor(td.headcode, rec);
-          const isArriving = sector.status.startsWith("Arriving");
-          const isSelected = (rec.username === selectedUsername);
+      if (currentTab === 'movements') {
+        if (!trains.length && !persons.length) {
+          body.innerHTML = `<div class="empty"><span class="empty__glyph">🚂</span><div class="empty__text">No players found matching search.</div></div>`;
+          return;
+        }
+        
+        if (trains.length) {
+          html += `<div class="sec-head">Active Trains &middot; ${trains.length}</div>`;
+          trains.forEach(({ rec, sector, entry }, i) => {
+            const td = rec.trainData || {};
+            const customColor = getTrainColor(td.headcode, rec);
+            const isArriving = sector.status.startsWith("Arriving");
+            const isSelected = (rec.username === selectedUsername);
+
+            const blockClass = sector.spad
+              ? (sector.status.startsWith("SPAD") ? 'tc-block spad-active' : 'tc-block spad-static')
+              : `tc-block ${isArriving ? 'pulse' : ''}`;
+
+            const hasNoHeadcode = !td.headcode || td.headcode.trim() === "" || td.headcode === "----" || td.headcode.toLowerCase() === "unknown";
+            const cardHeadcode = hasNoHeadcode ? "UNROUTED" : td.headcode;
+
+            html += `
+              <div class="train-card ${isSelected?'train-card--selected':''}" data-user="${esc(rec.username)}" tabindex="0" style="border-left-color: ${customColor} !important; --glow-color: ${customColor}; --card-color: ${customColor}; animation-delay: ${i*0.03}s">
+                <div class="tc-row1">
+                  <div class="tc-headcode" style="color: ${customColor}">${esc(cardHeadcode)}</div>
+                  <div class="${blockClass}" style="--card-color: ${customColor}">${esc(sector.status)}</div>
+                </div>
+                <div class="tc-dest">
+                  <span class="tc-arrow">&#8594;</span>
+                  <span>Bound for ${esc(td.destination || 'Not Set')}</span>
+                </div>
+                <div class="tc-meta">
+                  <div class="tc-driver">${svgPerson} ${esc(rec.username)}</div>
+                  ${currentServerId==='all'?`<div style="font-size:10px; color:var(--dim); font-family:monospace">Srv ${esc(rec.shortId)}</div>`:''}
+                </div>
+              </div>`;
+          });
+        }
+
+        if (persons.length) {
+          html += `<div class="sec-head">Personnel On Foot &middot; ${persons.length}</div>`;
+          persons.forEach(({ rec, sector, entry }) => {
+            const isSelected = (rec.username === selectedUsername);
+            html += `
+              <div class="person-row ${isSelected?'person-row--selected':''}" data-user="${esc(rec.username)}" tabindex="0">
+                <div class="person-row__dot"></div>
+                <div class="person-row__name">
+                  <span>${esc(rec.username)}</span>
+                  <span style="font-size: 11px; color: var(--dim); font-weight: 500;">${esc(sector.status)}</span>
+                </div>
+                ${currentServerId==='all'?`<div style="margin-left:auto; font-size:10px; color:var(--dim); font-family:monospace">${esc(rec.shortId)}</div>`:''}
+              </div>`;
+          });
+        }
+      } else if (currentTab === 'signal-boxes') {
+        const mannedBoxes = [];
+        
+        if (currentServerId !== 'all') {
+          if (signalBoxStates.has(currentServerId)) {
+            const states = signalBoxStates.get(currentServerId);
+            if (isSyncing) {
+              for (const [boxKey, boxState] of Object.entries(states)) {
+                mannedBoxes.push({
+                  boxKey,
+                  boxState,
+                  isTentative: true,
+                  syncRemaining: Math.max(0, Math.ceil((syncUntil - Date.now()) / 1000))
+                });
+              }
+            } else {
+              for (const [boxKey, boxState] of Object.entries(states)) {
+                mannedBoxes.push({ boxKey, boxState, isTentative: false });
+              }
+            }
+          }
+        } else {
+          let syncingServersCount = 0;
+          for (const [jobId, syncTime] of serverStartupSync.entries()) {
+            if (servers.has(jobId) && Date.now() < syncTime) {
+              syncingServersCount++;
+            }
+          }
+          if (syncingServersCount > 0) {
+            for (const boxKey of SIGNAL_BOXES_KEYS) {
+              mannedBoxes.push({
+                boxKey,
+                isGlobalSync: true,
+                syncCount: syncingServersCount
+              });
+            }
+          } else {
+            const globallyManned = new Map();
+            for (const boxKey of SIGNAL_BOXES_KEYS) {
+              globallyManned.set(boxKey, []);
+            }
+            for (const [serverId, states] of signalBoxStates.entries()) {
+              if (!servers.has(serverId)) continue;
+              for (const [boxKey, boxState] of Object.entries(states)) {
+                globallyManned.get(boxKey).push({ serverId, owner: boxState.owner });
+              }
+            }
+            for (const [boxKey, list] of globallyManned.entries()) {
+              mannedBoxes.push({ boxKey, isGlobalManned: true, mannedList: list });
+            }
+          }
+        }
+
+        const filteredMannedBoxes = mannedBoxes.filter(item => {
+          if (!query) return true;
+          const boxName = SIGNAL_BOXES[item.boxKey].name.toLowerCase();
+          if (boxName.includes(query)) return true;
           
-          const blockClass = sector.spad 
-            ? (sector.status.startsWith("SPAD") ? 'tc-block spad-active' : 'tc-block spad-static')
-            : `tc-block ${isArriving ? 'pulse' : ''}`;
-
-          const hasNoHeadcode = !td.headcode || td.headcode.trim() === "" || td.headcode === "----" || td.headcode.toLowerCase() === "unknown";
-          const cardHeadcode = hasNoHeadcode ? "UNROUTED" : td.headcode;
-
-          html += `
-            <div class="train-card ${isSelected?'train-card--selected':''}" data-user="${esc(rec.username)}" tabindex="0" style="border-left-color: ${customColor} !important; --glow-color: ${customColor}; --card-color: ${customColor}; animation-delay: ${i*0.03}s">
-              <div class="tc-row1">
-                <div class="tc-headcode" style="color: ${customColor}">${esc(cardHeadcode)}</div>
-                <div class="${blockClass}" style="--card-color: ${customColor}">${esc(sector.status)}</div>
-              </div>
-              <div class="tc-dest">
-                <span class="tc-arrow">&#8594;</span>
-                <span>Bound for ${esc(td.destination || 'Not Set')}</span>
-              </div>
-              <div class="tc-meta">
-                <div class="tc-driver">${svgPerson} ${esc(rec.username)}</div>
-                ${currentServerId==='all'?`<div style="font-size:10px; color:var(--dim); font-family:monospace">Srv ${esc(rec.shortId)}</div>`:''}
-              </div>
-            </div>`;
+          if (item.boxState && item.boxState.owner) {
+            if (item.boxState.owner.username.toLowerCase().includes(query)) return true;
+          }
+          if (item.mannedList) {
+            return item.mannedList.some(m => m.owner && m.owner.username.toLowerCase().includes(query));
+          }
+          return false;
         });
-      }
 
-      if (persons.length) {
-        html += `<div class="sec-head">Personnel On Foot &middot; ${persons.length}</div>`;
-        persons.forEach(({ rec, sector, entry }) => {
-          const isSelected = (rec.username === selectedUsername);
-          html += `
-            <div class="person-row ${isSelected?'person-row--selected':''}" data-user="${esc(rec.username)}" tabindex="0">
-              <div class="person-row__dot"></div>
-              <div class="person-row__name">
-                <span>${esc(rec.username)}</span>
-                <span style="font-size: 11px; color: var(--dim); font-weight: 500;">${esc(sector.status)}</span>
-              </div>
-              ${currentServerId==='all'?`<div style="margin-left:auto; font-size:10px; color:var(--dim); font-family:monospace">${esc(rec.shortId)}</div>`:''}
-            </div>`;
+        const getBoxPriorityRank = (item) => {
+          if (item.isTentative || item.isGlobalSync) return 0;
+          let isVacant = false;
+          if (item.isGlobalManned) {
+            isVacant = item.mannedList.filter(m => m.owner).length === 0;
+          } else {
+            isVacant = !item.boxState.owner;
+          }
+          if (isVacant) return 2;
+
+          let isGrace = false;
+          if (item.isGlobalManned) {
+            for (const [serverId, states] of signalBoxStates.entries()) {
+              if (!servers.has(serverId)) continue;
+              const boxState = states[item.boxKey];
+              if (boxState && boxState.owner && boxState.abandonedAt !== null) {
+                isGrace = true;
+                break;
+              }
+            }
+          } else {
+            isGrace = item.boxState.owner && item.boxState.abandonedAt !== null;
+          }
+          if (isGrace) return 1;
+
+          return 0;
+        };
+
+        filteredMannedBoxes.sort((a, b) => {
+          const rankA = getBoxPriorityRank(a);
+          const rankB = getBoxPriorityRank(b);
+          if (rankA !== rankB) return rankB - rankA;
+          return SIGNAL_BOXES[a.boxKey].name.localeCompare(SIGNAL_BOXES[b.boxKey].name);
+        });
+
+        if (!filteredMannedBoxes.length) {
+          body.innerHTML = `<div class="empty"><span class="empty__glyph">🚦</span><div class="empty__text">No signal boxes found matching search.</div></div>`;
+          return;
+        }
+        
+        let headerText = 'Signal Boxes';
+        if (currentServerId !== 'all') {
+          if (isSyncing) headerText = 'Calibrating Block Claims';
+        } else {
+          let syncingServersCount = 0;
+          for (const [jobId, syncTime] of serverStartupSync.entries()) {
+            if (servers.has(jobId) && Date.now() < syncTime) syncingServersCount++;
+          }
+          if (syncingServersCount > 0) headerText = 'Calibrating Block Claims';
+        }
+
+        html += `<div class="sec-head">${headerText} &middot; ${filteredMannedBoxes.length}</div>`;
+        filteredMannedBoxes.forEach((item) => {
+          const { boxKey } = item;
+          const boxName = SIGNAL_BOXES[boxKey].name;
+
+          if (item.isTentative) {
+            const statusColor = 'var(--blue)';
+            const occupantsCount = item.boxState.occupants.length;
+            const isSelected = selectedBoxKey === boxKey;
+            html += `
+              <div class="sigbox-row ${isSelected?'sigbox-row--selected':''}" data-box="${boxKey}" style="--glow-color: rgba(59, 130, 246, 0.25); --sel-color: ${statusColor}; border-left: 3px solid ${statusColor};">
+                <div class="sigbox-row__dot" style="background: ${statusColor}; box-shadow: 0 0 12px ${statusColor}80"></div>
+                <div class="sigbox-row__name">
+                  <span>${esc(boxName)}</span>
+                  <span class="sigbox-row__status" style="color: ${statusColor};">Calibrating (${item.syncRemaining}s) &middot; ${occupantsCount} inside</span>
+                </div>
+              </div>`;
+          } else if (item.isGlobalSync) {
+            const statusColor = 'var(--blue)';
+            const sCount = item.syncCount;
+            const isSelected = selectedBoxKey === boxKey;
+            html += `
+              <div class="sigbox-row ${isSelected?'sigbox-row--selected':''}" data-box="${boxKey}" style="--glow-color: rgba(59, 130, 246, 0.25); --sel-color: ${statusColor}; border-left: 3px solid ${statusColor};">
+                <div class="sigbox-row__dot" style="background: ${statusColor}; box-shadow: 0 0 12px ${statusColor}80"></div>
+                <div class="sigbox-row__name">
+                  <span>${esc(boxName)}</span>
+                  <span class="sigbox-row__status" style="color: ${statusColor};">Calibrating (${sCount} server${sCount===1?'':'s'})</span>
+                </div>
+              </div>`;
+          } else if (item.isGlobalManned) {
+            const activeClaims = item.mannedList.filter(m => m.owner);
+            const totalServers = item.mannedList.length;
+            const isSelected = selectedBoxKey === boxKey;
+            
+            if (activeClaims.length > 0) {
+              if (activeClaims.length === totalServers) {
+                const statusColor = 'var(--red)';
+                const label = `Occupied on all servers (${activeClaims.length}/${totalServers})`;
+                html += `
+                  <div class="sigbox-row ${isSelected?'sigbox-row--selected':''}" data-box="${boxKey}" style="--glow-color: rgba(239, 68, 68, 0.25); --sel-color: ${statusColor}; border-left: 3px solid ${statusColor};">
+                    <div class="sigbox-row__dot" style="background: ${statusColor}; box-shadow: 0 0 12px ${statusColor}80"></div>
+                    <div class="sigbox-row__name">
+                      <span>${esc(boxName)}</span>
+                      <span class="sigbox-row__status" style="color: ${statusColor};">${esc(label)}</span>
+                    </div>
+                  </div>`;
+              } else {
+                const statusColor = 'var(--amber)';
+                const label = `Claimed on ${activeClaims.length}/${totalServers} servers`;
+                html += `
+                  <div class="sigbox-row ${isSelected?'sigbox-row--selected':''}" data-box="${boxKey}" style="--glow-color: rgba(245, 158, 11, 0.25); --sel-color: ${statusColor}; border-left: 3px solid ${statusColor};">
+                    <div class="sigbox-row__dot" style="background: ${statusColor}; box-shadow: 0 0 12px ${statusColor}80"></div>
+                    <div class="sigbox-row__name">
+                      <span>${esc(boxName)}</span>
+                      <span class="sigbox-row__status" style="color: ${statusColor};">${esc(label)}</span>
+                    </div>
+                  </div>`;
+              }
+            } else {
+              const statusColor = 'var(--green)';
+              html += `
+                <div class="sigbox-row ${isSelected?'sigbox-row--selected':''}" data-box="${boxKey}" style="--glow-color: rgba(16, 185, 129, 0.25); --sel-color: ${statusColor}; border-left: 3px solid ${statusColor};">
+                  <div class="sigbox-row__dot" style="background: ${statusColor}; box-shadow: 0 0 12px ${statusColor}80"></div>
+                  <div class="sigbox-row__name">
+                    <span>${esc(boxName)}</span>
+                    <span class="sigbox-row__status" style="color: ${statusColor};">Vacant &middot; Free to Claim</span>
+                  </div>
+                </div>`;
+            }
+          } else {
+            const boxState = item.boxState;
+            const isClaimed = !!boxState.owner;
+            const isSelected = selectedBoxKey === boxKey;
+            
+            if (isClaimed) {
+              const isOwnerAbandoned = boxState.abandonedAt !== null;
+              const statusColor = isOwnerAbandoned ? 'var(--amber)' : 'var(--red)';
+              const glowColor = isOwnerAbandoned ? 'rgba(245, 158, 11, 0.25)' : 'rgba(239, 68, 68, 0.25)';
+              let label = 'Occupied';
+
+              if (isOwnerAbandoned) {
+                const remaining = Math.max(0, Math.ceil((90000 - (Date.now() - boxState.abandonedAt)) / 1000));
+                label = `Grace Period: ${remaining}s`;
+              }
+
+              html += `
+                <div class="sigbox-row ${isSelected?'sigbox-row--selected':''}" data-box="${boxKey}" style="--glow-color: ${glowColor}; --sel-color: ${statusColor}; border-left: 3px solid ${statusColor};">
+                  <div class="sigbox-row__dot" style="background: ${statusColor}; box-shadow: 0 0 12px ${statusColor}80"></div>
+                  <div class="sigbox-row__name">
+                    <span>${esc(boxName)}</span>
+                    <span class="sigbox-row__status" style="color: ${statusColor};">👑 ${esc(boxState.owner.username)} (${label})</span>
+                  </div>
+                </div>`;
+            } else {
+              const statusColor = 'var(--green)';
+              html += `
+                <div class="sigbox-row ${isSelected?'sigbox-row--selected':''}" data-box="${boxKey}" style="--glow-color: rgba(16, 185, 129, 0.25); --sel-color: ${statusColor}; border-left: 3px solid ${statusColor};">
+                  <div class="sigbox-row__dot" style="background: ${statusColor}; box-shadow: 0 0 12px ${statusColor}80"></div>
+                  <div class="sigbox-row__name">
+                    <span>${esc(boxName)}</span>
+                    <span class="sigbox-row__status" style="color: ${statusColor};">Vacant &middot; Free to Claim</span>
+                  </div>
+                </div>`;
+            }
+          }
         });
       }
 
       body.innerHTML = html;
 
+      if (scrollContainerToTopOnNextPaint) {
+        scrollContainerToTopOnNextPaint = false;
+        body.scrollTop = 0;
+      }
+
       body.querySelectorAll('[data-user]').forEach(el => {
         const activate = () => {
           selectPlayer(el.dataset.user);
+          if (isMobileLike()) document.body.classList.add('panel-hidden');
+        };
+        el.addEventListener('click', activate);
+        el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') activate(); });
+      });
+
+      body.querySelectorAll('[data-box]').forEach(el => {
+        const activate = () => {
+          const boxKey = el.dataset.box;
+          selectSignalBox(boxKey);
           if (isMobileLike()) document.body.classList.add('panel-hidden');
         };
         el.addEventListener('click', activate);
@@ -1784,6 +2780,7 @@
             if (entry.data.username === selectedUsername) selectPlayer(null);
           }
           servers.delete(jobId);
+          signalBoxStates.delete(jobId); // Clean up stale server claims
           hasUpdates = true;
           continue;
         }
@@ -1815,6 +2812,7 @@
 
       if (hasUpdates) {
         updateDropdown();
+        processSignalBoxClaims(); // Process precise claims inside the packet cycle
         purgeStale();
         schedPaint();
       }
@@ -1830,13 +2828,17 @@
       try {
         ws = new WebSocket(WS_URL);
 
-        ws.addEventListener('open', () => { 
+        ws.addEventListener('open', (event) => { 
+          if (event.target !== ws) return; // Prevent old connection callbacks
           led.className = 'chip__led live'; 
           wsText.textContent = 'Live Feed'; 
         });
 
-        ws.addEventListener('message', ({ data }) => {
-          let msg; try { msg = JSON.parse(data); } catch { return; }
+        ws.addEventListener('message', (event) => {
+          if (event.target !== ws) return; // Prevent duplicate packet processing
+          
+          let msg; 
+          try { msg = JSON.parse(event.data); } catch { return; }
           
           const payloads = Array.isArray(msg) ? msg : [msg];
 
@@ -1852,13 +2854,15 @@
           queuePacketFlush();
         });
 
-        ws.addEventListener('close', () => { 
+        ws.addEventListener('close', (event) => { 
+          if (event.target !== ws) return; // Discard orphaned reconnection timers
           led.className = 'chip__led error'; 
           wsText.textContent = 'Reconnecting'; 
           reconnTimer = setTimeout(connect, 5000); 
         });
         
-        ws.addEventListener('error', () => {
+        ws.addEventListener('error', (event) => {
+          if (event.target !== ws) return; // Prevent cross-instance errors
           ws.close();
         });
       } catch (err) {
@@ -1867,12 +2871,63 @@
         reconnTimer = setTimeout(connect, 5000);
       }
     }
+    setInterval(() => {
+      let hasActiveCountdowns = false;
+      const now = Date.now();
+      
+      // Check if any server is currently in calibration startup
+      for (const syncTime of serverStartupSync.values()) {
+        if (now < syncTime) {
+          hasActiveCountdowns = true;
+          break;
+        }
+      }
+      
+      // Check if any box is currently in a grace period countdown
+      if (!hasActiveCountdowns) {
+        for (const states of signalBoxStates.values()) {
+          for (const boxState of Object.values(states)) {
+            if (boxState.abandonedAt !== null) {
+              hasActiveCountdowns = true;
+              break;
+            }
+          }
+          if (hasActiveCountdowns) break;
+        }
+      }
+      
+      // Only trigger a redraw if visible timers need to update
+      if (hasActiveCountdowns) {
+        updateSignalBoxMapLayers();
+        schedPaint();
+      }
+    }, 1000);
     connect();
 
     /* ── UI Bindings ─────────────────────────────────────────── */
+    // Bind Tab Switching clicks
+    document.querySelectorAll('.panel__tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const selectedTab = tab.dataset.tab;
+        if (currentTab === selectedTab) return;
+        currentTab = selectedTab;
+        
+        document.querySelectorAll('.panel__tab').forEach(t => {
+          t.classList.toggle('panel__tab--active', t.dataset.tab === currentTab);
+        });
+        
+        // Reset sidebar list scroll position on tab switch
+        const bodyEl = document.getElementById('panel-body');
+        if (bodyEl) bodyEl.scrollTop = 0;
+        
+        schedPaint();
+      });
+    });
+    
     document.getElementById('server-select').addEventListener('change', (e) => {
       currentServerId = e.target.value;
       updateMapVisibility();
+      updateSignalBoxMapLayers(); // Sync map vectors on server filter change
       schedPaint();
       syncPanelJoinVisibility();
 
