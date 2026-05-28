@@ -2429,7 +2429,20 @@
           
           if (currentServerId !== 'all' && signalBoxStates.has(currentServerId)) {
             const boxState = signalBoxStates.get(currentServerId)[boxKey];
-            boxDataStr = boxState.owner ? (boxState.owner.username + (boxState.abandonedAt !== null ? '1' : '0')) : '0';
+            
+            if (isSyncing) {
+              const remaining = Math.max(0, Math.ceil((syncUntil - Date.now()) / 1000));
+              boxDataStr = 'sync' + remaining;
+            } else if (boxState.owner) {
+              if (boxState.abandonedAt !== null) {
+                const remaining = Math.max(0, Math.ceil((90000 - (Date.now() - boxState.abandonedAt)) / 1000));
+                boxDataStr = boxState.owner.username + 'g' + remaining;
+              } else {
+                boxDataStr = boxState.owner.username + 'c';
+              }
+            } else {
+              boxDataStr = '0';
+            }
           } else {
             let claimedCount = 0;
             for (const states of signalBoxStates.values()) {
@@ -2901,7 +2914,7 @@
         updateSignalBoxMapLayers();
         schedPaint();
       }
-    }, 1000);
+    }, 250);
     connect();
 
     /* ── UI Bindings ─────────────────────────────────────────── */
