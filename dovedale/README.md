@@ -1,19 +1,20 @@
-# HonorWithin's Dovedale Livemap — Signaling Desk
+# HonorWithin's Dovedale Livemap
 
-A high-performance, alternative live map for the Dovedale Railway game on Roblox. This project is built as a complete single-file HTML client utilizing pure, lightweight HTML5, CSS3, and Leaflet JS vector capabilities.
+An alternative livemap for Dovedale Railway on Roblox that is contained entirely within a single HTML file for easy editing and use. The only dependencies are Leaflet and Google Fonts.
 
-## On Architecture & Security
+# AI Disclaimer
+AI was used in making this. It was used to accelerate coding so I could get to the fun stuff faster. I've seen some concerns raised about the use of AI, so I'd like to be as clear as possible about how it was used.
 
-This application is built with a strict emphasis on **minimizing external dependencies** to mitigate potential supply chain attacks:
+Every change was manually reviewed diff by diff in VS Code using the compare diffs feature. I did not add any code I didn't understand myself.
 
-1. **Single-File Architecture:** The entire web app resides within a single file (`index.html`). There are no Node/NPM compilation processes, Webpack bundling, or heavy build runtimes.
-2. **Minimal External Dependencies:** The application relies on exactly **two** trusted resources loaded securely via CDNs: the Leaflet JS library and Google Fonts. There are no tracking scripts, third-party analytics, or background telemetry databases.
-3. **No Hidden Network Requests:** Outside of the standard Leaflet map tile rendering and the secure WebSocket handshake to retrieve real-time Dovedale live data, the client remains completely local and private.
+I found the game one day and really enjoyed it. I stayed up multiple nights making this all work and come together. I was intentionally careful about XSS vulnerabilities.
 
-## AI Disclaimer
+Part of my reasoning for it being a single file was because I'm tired of apps being huge sizes and bundled with so many packages. I also feel fatigued by the risks of supply chain vulnerability involved in those apps. I felt an executable or application would feel sketchy to run, but an HTML is easily auditable and can be run instantly both online or locally. I made intentional choices and tradeoffs that I would be happy to explain anytime. I'd love to talk about this project, it has been really fun to work on because I've been working on it during a time I feel most passionate about the game.
 
-AI was used in the making of this hobby project. AI is not a replacement for experienced programmers. That being said, it should be O-K as it utilizes minimal dependencies and contacts no external servers except for Dovedale's Websocket backend.
+This is why I've intentionally open sourced it under MIT license. So that I can give back and contribute something I personally find really cool. I just want the tool to help people.
 
-* **Role of AI:** Generative AI was utilized during the development of this project. It served as a powerful tool to accelerate the writing of boilerplate code, streamline early UI mockups, and help translate standard geometric formulas.
-* **Human Oversight & Auditing:** AI did not replace the role of a programmer. Every single block of generated code was carefully audited, scrutinized, rewritten, and tested by hand before integration. While I do not typically use AI tools in my workflow, leveraging them in this personal hobby project significantly reduced manual drafting time.
-* **Disclaimer:** Because this is an independently maintained, single-file hobby project, the codebase has not been audited for production environments. The source is provided "as-is" primarily as an open-source educational resource under the MIT license. Though the code is open to read, it is consolidated into a single file and intended mainly for personal hosting, learning, and self-experimentation.
+This README was initially (previous commit, not everything you see now) written by an AI that was told to summarize my words for a README. This was done because I tend to be brief to a fault. I've instead decided to rewrite this README myself following some concerns about AI being raised.
+
+# License
+MIT
+https://systematicequation.github.io/dovedale/LICENSE
