@@ -90,12 +90,6 @@
       image-rendering: pixelated !important;                 
       -ms-interpolation-mode: nearest-neighbor !important;   
     }
-    
-    /* Subtle vignette to ground the screen */
-    #map::after {
-      content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 400;
-      box-shadow: inset 0 0 120px rgba(0,0,0,0.8);
-    }
 
     /* Leaflet Overrides */
     .leaflet-control-zoom { border: 1px solid var(--border-hi) !important; border-radius: 8px !important; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.8) !important; z-index: 950 !important; margin-bottom: max(24px, env(safe-area-inset-bottom)) !important; margin-right: max(24px, env(safe-area-inset-right)) !important; }
@@ -316,7 +310,7 @@
       position: fixed; top: 0; left: 0; right: 0; padding-top: env(safe-area-inset-top);
       height: calc(var(--hdr-h) + env(safe-area-inset-top)); z-index: 800;
       display: flex; align-items: center; justify-content: space-between; padding-inline: 32px;
-      background: linear-gradient(to bottom, rgba(3,7,18,0.95) 0%, rgba(3,7,18,0.5) 60%, transparent 100%); pointer-events: none;
+      pointer-events: none;
     }
     .header__brand { display: flex; align-items: baseline; gap: 12px; pointer-events: auto; }
     .header__logo { font-family: 'Playfair Display', Georgia, serif; font-size: 26px; font-weight: 700; color: var(--text); text-shadow: 0 4px 24px rgba(0,0,0,0.9); letter-spacing: -0.02em; }
@@ -569,6 +563,41 @@
       font-size: 11px;
       font-weight: 700;
     }
+
+    .sigbox-mine-btn {
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1;
+      padding: 7px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+    }
+    .sigbox-mine-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--border-hi); color: var(--text); }
+    .sigbox-mine-btn--active {
+      background: rgba(245, 158, 11, 0.18);
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    .map-filter-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      margin: 4px 6px 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .map-filter-toggle input { accent-color: var(--amber); width: 16px; height: 16px; cursor: pointer; }
 
     /* ── Sidebar Terminal List ──────────────────────────────────────── */
     #panel {
@@ -850,6 +879,10 @@
         <span>Signal Boxes</span>
         <span class="panel__tab-badge" id="badge-sigboxes">0</span>
       </button>
+      <button class="panel__tab" id="tab-arrivals" data-tab="arrivals">
+        <span>Arrivals</span>
+        <span class="panel__tab-badge" id="badge-arrivals">0</span>
+      </button>
     </div>
 
     <div class="panel__search-container">
@@ -986,6 +1019,73 @@
       }
     }
 
+    // ── Line Topology ───────────────────────────────────────────────────
+    // Adjacency graph of named stations (matches AREA_MARKERS keys), used to
+    // work out which stations lie between a train's current position and its
+    // destination. Verified against the real in-game map layout — see
+    // Marigot Crossing/Codsall Castle/Glassbury Junction as "the main", and
+    // Dovedale Central as the 4-way hub (East/Harbour/Gleethrop End/Marigot).
+    // Wington Mount is a real waypoint but not a signal box and isn't a
+    // selectable destination, so it's intentionally omitted as a node.
+    const LINE_TOPOLOGY = {
+      "Ashburn": ["Benyhone Loop"],
+      "Benyhone Loop": ["Ashburn", "Fanory Mill"],
+      "Fanory Mill": ["Benyhone Loop", "Groenewoud"],
+      "Groenewoud": ["Fanory Mill", "Conby"],
+      "Conby": ["Groenewoud", "Satus"],
+      "Satus": ["Conby", "Dovedale East"],
+      "Dovedale East": ["Satus", "Cosdale Harbour", "Dovedale Central"],
+      "Cosdale Harbour": ["Dovedale East", "Dovedale Central"],
+      "Dovedale Central": ["Dovedale East", "Cosdale Harbour", "Gleethrop End", "Marigot Crossing"],
+      "Gleethrop End": ["Dovedale Central", "Perthtyne"],
+      "Perthtyne": ["Gleethrop End", "Mazewood"],
+      "Mazewood": ["Perthtyne"],
+      "Marigot Crossing": ["Dovedale Central", "Masonfield", "Codsall Castle"],
+      "Masonfield": ["Marigot Crossing"],
+      "Codsall Castle": ["Marigot Crossing", "Glassbury Junction"],
+      "Glassbury Junction": ["Codsall Castle"]
+    };
+    const STATION_NAME_BY_LOWER = new Map(Object.keys(LINE_TOPOLOGY).map(name => [name.toLowerCase(), name]));
+
+    // Breadth-first search — fine for this graph size (16 nodes, one small loop)
+    function findStationPath(fromName, toName) {
+      if (!LINE_TOPOLOGY[fromName] || !LINE_TOPOLOGY[toName]) return null;
+      if (fromName === toName) return [fromName];
+
+      const visited = new Set([fromName]);
+      const queue = [[fromName]];
+
+      while (queue.length) {
+        const path = queue.shift();
+        const node = path[path.length - 1];
+        for (const neighbor of LINE_TOPOLOGY[node]) {
+          if (visited.has(neighbor)) continue;
+          visited.add(neighbor);
+          const nextPath = [...path, neighbor];
+          if (neighbor === toName) return nextPath;
+          queue.push(nextPath);
+        }
+      }
+      return null;
+    }
+
+    // Given the sidebar's `trains` list ({ rec, sector, ... }), returns the ones
+    // whose route from their current position to their destination passes
+    // through (or terminates at) the named signal box's station.
+    function getArrivalsForBox(trains, boxKey) {
+      const boxData = SIGNAL_BOXES[boxKey];
+      if (!boxData) return [];
+      const boxStation = boxData.name;
+
+      return trains.filter(({ rec, sector }) => {
+        if (hasNoActiveRoute(rec)) return false;
+        const destStation = STATION_NAME_BY_LOWER.get((rec.trainData.destination || '').trim().toLowerCase());
+        if (!destStation || !LINE_TOPOLOGY[sector.station]) return false;
+        const path = findStationPath(sector.station, destStation);
+        return !!path && path.includes(boxStation);
+      });
+    }
+
     const signalBoxStates = new Map(); // serverId -> { boxKey -> state }
     const signalBoxLayers = {};
     const serverStartupSync = new Map(); // serverId -> syncEndTime
@@ -996,8 +1096,35 @@
 
     let currentServerId = 'all';
     let selectedUsername = null;
-    let selectedBoxKey = null; // Currently selected signal box
-    let currentTab = 'movements'; // Active tab view: 'movements' | 'signal-boxes'
+    let selectedBoxKey = null; // Currently selected signal box (map focus/highlight only)
+    let currentTab = 'movements'; // Active tab view: 'movements' | 'signal-boxes' | 'arrivals'
+
+    const MY_BOX_STORAGE_KEY = 'dovedale_myBoxKey';
+    let myBoxKey = localStorage.getItem(MY_BOX_STORAGE_KEY); // Personal "this is my signal box" preference
+    if (myBoxKey && !SIGNAL_BOXES[myBoxKey]) myBoxKey = null; // Guard against stale/renamed keys
+
+    function setMyBoxKey(boxKey) {
+      if (myBoxKey === boxKey) return;
+      myBoxKey = boxKey;
+      if (boxKey) localStorage.setItem(MY_BOX_STORAGE_KEY, boxKey);
+      else localStorage.removeItem(MY_BOX_STORAGE_KEY);
+      schedPaint();
+    }
+
+    let mapFilterArrivalsOnly = false; // When on, the map hides trains not in the current arrivals list
+    let arrivalsUsernameSet = new Set(); // Refreshed each paint() from the current arrivals list
+
+    function passesArrivalsFilter(entry) {
+      if (!mapFilterArrivalsOnly || !myBoxKey) return true;
+      if (!entry.data.trainData) return true; // Personnel on foot are never hidden by this filter
+      return arrivalsUsernameSet.has(entry.data.username);
+    }
+
+    function renderMineButton(boxKey) {
+      const isMine = myBoxKey === boxKey;
+      const label = isMine ? 'This is your signal box — click to unset' : 'Set as your signal box';
+      return `<button class="sigbox-mine-btn ${isMine ? 'sigbox-mine-btn--active' : ''}" data-mine-box="${boxKey}" title="${label}" aria-label="${label}">${isMine ? '★' : '☆'}</button>`;
+    }
     let scrollContainerToTopOnNextPaint = false; // Flag to snap scroll layout to top when selecting trains
     let isFollowing = false;
     let isZooming = false; // Viewport Pruning Lock
@@ -1969,8 +2096,8 @@
           if (entry.marker) {
             // Viewport Pruning Lock during zooms to prevent layout ghost offsets
             if (!isZooming) {
-              const isInside = paddedBounds.contains(motion.latlng);
-              
+              const isInside = paddedBounds.contains(motion.latlng) && passesArrivalsFilter(entry);
+
               if (isInside) {
                 if (!map.hasLayer(entry.marker)) {
                   entry.marker.addTo(map);
@@ -2074,7 +2201,7 @@
       for (const [jobId, srvMap] of servers.entries()) {
         const isVisible = (currentServerId === 'all' || currentServerId === jobId);
         for (const player of srvMap.values()) {
-          const onScreen = bounds.contains(player.renderLatLng || player.marker.getLatLng());
+          const onScreen = bounds.contains(player.renderLatLng || player.marker.getLatLng()) && passesArrivalsFilter(player);
           if (isVisible && onScreen && !map.hasLayer(player.marker)) {
             player.marker.addTo(map);
           } else if ((!isVisible || !onScreen) && map.hasLayer(player.marker) && !player.isSelected) {
@@ -2328,7 +2455,10 @@
 
       trains.sort((a, b) => a.inView - b.inView || a.distance - b.distance || (a.rec.trainData?.headcode||'').localeCompare(b.rec.trainData?.headcode||''));
       persons.sort((a, b) => a.inView - b.inView || a.distance - b.distance || a.rec.username.localeCompare(b.rec.username));
-      
+
+      const arrivals = myBoxKey ? getArrivalsForBox(trains, myBoxKey) : [];
+      arrivalsUsernameSet = new Set(arrivals.map(a => a.rec.username));
+
       // Calculate tab badge metrics
       let unfilteredMovementsCount = 0;
       for (const [jobId, srv] of servers) {
@@ -2404,7 +2534,13 @@
           sigboxBadge.classList.add('panel__tab-badge--full');
         }
       }
-      
+
+      const arrivalsBadge = document.getElementById('badge-arrivals');
+      if (arrivalsBadge) {
+        setDOMText('badge-arrivals', String(arrivals.length));
+        arrivalsBadge.classList.toggle('panel__tab-badge--available', arrivals.length > 0);
+      }
+
       const spadNote = document.getElementById('panel-spad-note');
       if (spadNote) spadNote.classList.toggle('active', trains.some((t) => t.sector.spad));
 
@@ -2450,7 +2586,13 @@
             }
             boxDataStr = String(claimedCount);
           }
-          stateHash += boxKey + boxDataStr + isSelected;
+          stateHash += boxKey + boxDataStr + isSelected + (myBoxKey === boxKey ? 'M' : '');
+        }
+      } else if (currentTab === 'arrivals') {
+        stateHash += (myBoxKey || 'none') + (mapFilterArrivalsOnly ? 'F1' : 'F0');
+        for (let i = 0; i < arrivals.length; i++) {
+          const a = arrivals[i];
+          stateHash += a.rec.username + (a.rec.trainData?.headcode || '') + a.sector.status + (a.entry.isSelected ? '1' : '0');
         }
       }
 
@@ -2647,6 +2789,7 @@
                   <span>${esc(boxName)}</span>
                   <span class="sigbox-row__status" style="color: ${statusColor};">Calibrating (${item.syncRemaining}s) &middot; ${occupantsCount} inside</span>
                 </div>
+                ${renderMineButton(boxKey)}
               </div>`;
           } else if (item.isGlobalSync) {
             const statusColor = 'var(--blue)';
@@ -2659,6 +2802,7 @@
                   <span>${esc(boxName)}</span>
                   <span class="sigbox-row__status" style="color: ${statusColor};">Calibrating (${sCount} server${sCount===1?'':'s'})</span>
                 </div>
+                ${renderMineButton(boxKey)}
               </div>`;
           } else if (item.isGlobalManned) {
             const activeClaims = item.mannedList.filter(m => m.owner);
@@ -2676,6 +2820,7 @@
                       <span>${esc(boxName)}</span>
                       <span class="sigbox-row__status" style="color: ${statusColor};">${esc(label)}</span>
                     </div>
+                    ${renderMineButton(boxKey)}
                   </div>`;
               } else {
                 const statusColor = 'var(--amber)';
@@ -2687,6 +2832,7 @@
                       <span>${esc(boxName)}</span>
                       <span class="sigbox-row__status" style="color: ${statusColor};">${esc(label)}</span>
                     </div>
+                    ${renderMineButton(boxKey)}
                   </div>`;
               }
             } else {
@@ -2698,6 +2844,7 @@
                     <span>${esc(boxName)}</span>
                     <span class="sigbox-row__status" style="color: ${statusColor};">Vacant &middot; Free to Claim</span>
                   </div>
+                  ${renderMineButton(boxKey)}
                 </div>`;
             }
           } else {
@@ -2723,6 +2870,7 @@
                     <span>${esc(boxName)}</span>
                     <span class="sigbox-row__status" style="color: ${statusColor};">👑 ${esc(boxState.owner.username)} (${label})</span>
                   </div>
+                  ${renderMineButton(boxKey)}
                 </div>`;
             } else {
               const statusColor = 'var(--green)';
@@ -2733,10 +2881,51 @@
                     <span>${esc(boxName)}</span>
                     <span class="sigbox-row__status" style="color: ${statusColor};">Vacant &middot; Free to Claim</span>
                   </div>
+                  ${renderMineButton(boxKey)}
                 </div>`;
             }
           }
         });
+      } else if (currentTab === 'arrivals') {
+        if (!myBoxKey) {
+          body.innerHTML = `<div class="empty"><span class="empty__glyph">🚦</span><div class="empty__text">Set your signal box from the Signal Boxes tab to see arrivals.</div></div>`;
+          return;
+        }
+
+        const boxStation = SIGNAL_BOXES[myBoxKey].name;
+
+        html += `
+          <label class="map-filter-toggle">
+            <input type="checkbox" data-map-filter-toggle ${mapFilterArrivalsOnly ? 'checked' : ''} />
+            <span>Show only these trains on the map</span>
+          </label>`;
+
+        if (!arrivals.length) {
+          html += `<div class="empty"><span class="empty__glyph">🚂</span><div class="empty__text">No trains currently bound for ${esc(boxStation)}.</div></div>`;
+        } else {
+          html += `<div class="sec-head">Inbound to ${esc(boxStation)} &middot; ${arrivals.length}</div>`;
+          arrivals.forEach(({ rec, sector }, i) => {
+            const td = rec.trainData || {};
+            const customColor = getTrainColor(td.headcode, rec);
+            const isSelected = (rec.username === selectedUsername);
+
+            html += `
+              <div class="train-card ${isSelected?'train-card--selected':''}" data-user="${esc(rec.username)}" tabindex="0" style="border-left-color: ${customColor} !important; --glow-color: ${customColor}; --card-color: ${customColor}; animation-delay: ${i*0.03}s">
+                <div class="tc-row1">
+                  <div class="tc-headcode" style="color: ${customColor}">${esc(td.headcode)}</div>
+                  <div class="tc-block" style="--card-color: ${customColor}">${esc(sector.status)}</div>
+                </div>
+                <div class="tc-dest">
+                  <span class="tc-arrow">&#8594;</span>
+                  <span>Bound for ${esc(td.destination)}</span>
+                </div>
+                <div class="tc-meta">
+                  <div class="tc-driver">${svgPerson} ${esc(rec.username)}</div>
+                  ${currentServerId==='all'?`<div style="font-size:10px; color:var(--dim); font-family:monospace">Srv ${esc(rec.shortId)}</div>`:''}
+                </div>
+              </div>`;
+          });
+        }
       }
 
       body.innerHTML = html;
@@ -2764,6 +2953,22 @@
         el.addEventListener('click', activate);
         el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') activate(); });
       });
+
+      body.querySelectorAll('[data-mine-box]').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const boxKey = el.dataset.mineBox;
+          setMyBoxKey(myBoxKey === boxKey ? null : boxKey);
+        });
+      });
+
+      const mapFilterToggle = body.querySelector('[data-map-filter-toggle]');
+      if (mapFilterToggle) {
+        mapFilterToggle.addEventListener('change', () => {
+          mapFilterArrivalsOnly = mapFilterToggle.checked;
+          schedPaint();
+        });
+      }
     }
 
     /* ── WebSocket Controller ────────────────────────────────── */
