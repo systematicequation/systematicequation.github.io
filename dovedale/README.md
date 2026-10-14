@@ -1,3 +1,5 @@
+1.0 is now archived in favor of 2.0.
+
 # HonorWithin's Dovedale Livemap
 
 An alternative livemap for Dovedale Railway on Roblox that is contained entirely within a single HTML file for easy editing and use. The only dependencies are Leaflet and Google Fonts.
